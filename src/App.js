@@ -373,7 +373,7 @@ export default function App() {
     if (screen !== 'game' || !gameState.isActive) return;
 
     const { gamma } = event; // gamma is left-to-right tilt (which is Up/Down in Landscape)
-    const TILT_THRESHOLD = 35; // Increased threshold slightly for stability
+    const TILT_THRESHOLD = 30; // Increased threshold slightly for stability
     const NEUTRAL_THRESHOLD = 15; // Zone considered "Reset"
 
     // 1. NEUTRAL RESET CHECK

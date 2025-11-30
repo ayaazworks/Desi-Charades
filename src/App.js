@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, RefreshCw } from 'lucide-react';
 
-// --- ADMOB IMPORT (COMMENTED OUT FOR WEB PREVIEW) ---
-// import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+// --- ADMOB IMPORTS ---
+// MAKE SURE TO UNCOMMENT THESE FOR REAL DEVICE BUILD
+import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
 
-// --- MOCK ADMOB FOR WEB PREVIEW ---
+// --- MOCK ADMOB (Use this ONLY for Web Preview, Delete for Real Build) ---
+/*
 const AdMob = {
   initialize: async () => console.log('AdMob: Initialized'),
   showBanner: async () => console.log('AdMob: Show Banner'),
@@ -13,24 +15,21 @@ const AdMob = {
 };
 const BannerAdSize = { BANNER: 'BANNER' };
 const BannerAdPosition = { BOTTOM_CENTER: 'BOTTOM_CENTER' };
+*/
 
 /**
  * INDIAN CHARADES - FINAL STABLE VERSION
- * * Features:
- * - Fixed Redirect Bug (Splash screen logic isolated)
- * - "Neutral Zone" Tilt Logic (Prevents accidental double-triggering)
- * - Auto-Start on Landscape
  */
 
-// --- CONSTANTS (Moved outside to prevent re-renders) ---
+// --- CONSTANTS ---
 const ADMOB_IDS = {
   android: {
-    banner: 'ca-app-pub-3940256099942544/6300978111', 
-    interstitial: 'ca-app-pub-3940256099942544/1033173712'
+    banner: 'ca-app-pub-4060071785789817/3553680317', // Test ID
+    interstitial: 'ca-app-pub-4060071785789817/7615396013' // Test ID
   },
   ios: {
-    banner: 'ca-app-pub-3940256099942544/2934735716',
-    interstitial: 'ca-app-pub-3940256099942544/4411468910'
+    banner: 'ca-app-pub-4060071785789817/1820143856', // Test ID
+    interstitial: 'ca-app-pub-4060071785789817/8978123730' // Test ID
   }
 };
 
@@ -161,12 +160,14 @@ export default function App() {
   
   // Tilt Logic Refs
   const tiltLocked = useRef(false);
-  const waitingForNeutral = useRef(false); // NEW: Requires user to tilt back to center
+  
+  // FIX 1: Start 'waitingForNeutral' as TRUE implicitly when game starts
+  // This forces the user to bring phone to center before first guess works
+  const waitingForNeutral = useRef(true); 
 
   // --- INITIALIZATION ---
 
   const checkOrientation = useCallback(() => {
-    // A robust check for landscape: width > height
     const isLand = window.innerWidth > window.innerHeight;
     setIsLandscape(isLand);
   }, []);
@@ -177,46 +178,47 @@ export default function App() {
       await AdMob.initialize();
       const isAndroid = /Android/i.test(navigator.userAgent);
       const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
+      
+      // Request Tracking on iOS (Required for Ads)
+      // await AdMob.requestTrackingAuthorization(); 
+
       await AdMob.showBanner({
         adId: ids.banner,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0, 
         size: BannerAdSize.BANNER
       });
+      console.log("Ads initialized and banner requested");
     } catch (e) {
       console.error("AdMob Init Error:", e);
     }
   }, [settings.adsRemoved]);
 
-  // App Start - Fixed the "Redirect Bug" by reducing dependencies
+  // App Start
   useEffect(() => {
     initializeAds();
     checkOrientation();
 
-    // Listen for resize/orientation changes
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
 
-    // This SPLASH TIMER now only runs ONCE on mount, ensuring no random redirects
     const timer = setTimeout(() => {
       setScreen('home');
-    }, 2500); // Increased splash time slightly
+    }, 2500);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('orientationchange', checkOrientation);
     };
-  }, []); // Empty dependency array ensures this only runs once!
+  }, []);
 
 
   // --- GAME LOGIC: PREP & START ---
 
   const startGameFlow = (duration) => {
-    // 1. Set settings
     setSettings(prev => ({ ...prev, durationMinutes: duration }));
     
-    // 2. Setup Game Data
     const catData = CATEGORIES.find(c => c.id === gameState.category);
     let words = [...catData.words];
     words = words.sort(() => Math.random() - 0.5);
@@ -231,29 +233,30 @@ export default function App() {
       results: []
     });
 
-    // 3. Reset Tilt State
-    waitingForNeutral.current = false;
+    // FIX 1: Reset Logic
+    // Start by Waiting for Neutral. 
+    // This ignores any tilt input until the user holds the phone straight at least once.
+    waitingForNeutral.current = true; 
     tiltLocked.current = false;
 
-    // 4. Go to Prep Screen
     setScreen('prep');
     setPrepTimer(3);
     requestTiltPermission();
   };
 
-  // --- PREP TIMER LOGIC (LANDSCAPE TRIGGER) ---
+  // --- PREP TIMER LOGIC ---
   useEffect(() => {
     let countInterval = null;
 
-    // Only run this logic if we are in PREP mode
     if (screen === 'prep') {
       if (isLandscape) {
-        // Phone is in position! Start Countdown.
         countInterval = setInterval(() => {
           setPrepTimer(prev => {
             if (prev <= 1) {
               clearInterval(countInterval);
               setScreen('game');
+              // IMPORTANT: Enforce neutral wait on game start
+              waitingForNeutral.current = true;
               setGameState(gs => ({ ...gs, isActive: true }));
               return 0;
             }
@@ -262,7 +265,6 @@ export default function App() {
           });
         }, 1000);
       } else {
-        // Phone rotated back to portrait? Reset timer.
         setPrepTimer(3);
       }
     }
@@ -302,6 +304,7 @@ export default function App() {
        try {
          const isAndroid = /Android/i.test(navigator.userAgent);
          const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
+         // Prepare interstitial
          await AdMob.prepareInterstitial({ adId: ids.interstitial });
          await AdMob.showInterstitial();
        } catch (e) {
@@ -345,8 +348,7 @@ export default function App() {
         };
     });
 
-    // Next Word Loading Logic
-    // NOTE: We do NOT unlock tilt here. We set a flag requiring neutral.
+    // Reset loop
     waitingForNeutral.current = true; 
 
     setTimeout(() => {
@@ -362,40 +364,37 @@ export default function App() {
           currentWord: nextQueue[0]
         };
       });
-      // We still keep tiltLocked true until user physically resets orientation
     }, 500); 
   }, [settings.sound, settings.vibration, endGame]);
 
 
-  // --- LANDSCAPE TILT SENSOR LOGIC (FIXED) ---
+  // --- LANDSCAPE TILT SENSOR LOGIC ---
   const handleOrientation = useCallback((event) => {
-    // Guard Clauses
     if (screen !== 'game' || !gameState.isActive) return;
 
-    const { gamma } = event; // gamma is left-to-right tilt (which is Up/Down in Landscape)
-    const TILT_THRESHOLD = 40; // Increased threshold slightly for stability
-    const NEUTRAL_THRESHOLD = 15; // Zone considered "Reset"
+    const { gamma } = event; 
+    const TILT_THRESHOLD = 40; 
+    const NEUTRAL_THRESHOLD = 15; 
 
-    // 1. NEUTRAL RESET CHECK
-    // If we are locked waiting for neutral, check if user brought phone back to center
+    // FIX 1: NEUTRAL RESET CHECK
+    // If waitingForNeutral is true (which it is at start of game),
+    // we do NOTHING until gamma is between -15 and 15 (Phone is straight).
     if (waitingForNeutral.current) {
       if (Math.abs(gamma) < NEUTRAL_THRESHOLD) {
-        // User has returned to center! Unlock everything.
         waitingForNeutral.current = false;
         tiltLocked.current = false;
+        // Optional: Play a tiny "blip" sound here to let user know it's active
       }
-      return; // Do nothing else until reset
+      return; 
     }
 
-    // 2. STANDARD CHECK
-    // If not locked, look for triggers
     if (tiltLocked.current) return;
 
-    // Gamma < -35 means tilted UP (towards sky/back of head) -> Correct
+    // Up (Correct)
     if (gamma < -TILT_THRESHOLD) {
        processAction('correct'); 
     } 
-    // Gamma > 35 means tilted DOWN (towards floor/chin) -> Pass
+    // Down (Pass)
     else if (gamma > TILT_THRESHOLD) {
        processAction('pass');    
     }
@@ -415,10 +414,7 @@ export default function App() {
   const requestTiltPermission = async () => {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       try {
-        const response = await DeviceOrientationEvent.requestPermission();
-        if (response !== 'granted') {
-          // Permission denied
-        }
+        await DeviceOrientationEvent.requestPermission();
       } catch (e) {
         console.error(e);
       }
@@ -429,14 +425,13 @@ export default function App() {
     setSettings(prev => ({ ...prev, adsRemoved: true }));
   };
 
-  // --- RENDER HELPERS ---
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // --- COMPONENT RENDER TREE ---
+  // --- RENDER ---
 
   if (screen === 'splash') {
     return (
@@ -531,10 +526,6 @@ export default function App() {
                 <span className="flex items-center gap-2"><ShieldCheck size={20}/> Restore Purchase</span>
               </button>
             </div>
-            <div className="mt-8 p-4 bg-white/5 rounded-xl text-xs text-gray-400">
-               <h4 className="font-bold text-gray-300 mb-2">Privacy Policy</h4>
-               <p>We do not collect personal data. All game data is stored locally on your device. AdMob may collect data for personalized ads.</p>
-            </div>
           </div>
         ) : (
            <div className="space-y-6 text-gray-300">
@@ -610,11 +601,9 @@ export default function App() {
     );
   }
 
-  // 7. PREP SCREEN (Landscape Detection)
   if (screen === 'prep') {
     return (
       <div className={`h-screen w-full bg-black text-white flex flex-col items-center justify-center p-8 text-center transition-colors duration-500 ${isLandscape ? 'bg-green-900' : 'bg-red-900'}`}>
-        
         {!isLandscape ? (
           <>
             <RotateCw size={80} className="mb-6 text-yellow-400 animate-spin" />
@@ -679,16 +668,28 @@ export default function App() {
     );
   }
 
+  // FIX 2: REARRANGED LAYOUT FOR RESULT SCREEN
   if (screen === 'result') {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-        <div className="p-6 text-center border-b border-gray-700">
+        {/* Header and Score */}
+        <div className="p-6 text-center bg-gray-800 shadow-md z-10">
            <h2 className="text-3xl font-bold mb-2">Time's Up!</h2>
            <div className="text-6xl font-black text-yellow-400 mb-2">{gameState.score.correct}</div>
-           <p className="text-gray-400">Correct Guesses</p>
+           <p className="text-gray-400 mb-4">Correct Guesses</p>
+           
+           {/* MOVED PLAY AGAIN BUTTON HERE */}
+           <button 
+             onClick={() => setScreen('home')} 
+             className="w-full bg-yellow-400 text-black py-4 rounded-xl font-bold text-xl shadow-lg flex items-center justify-center gap-2"
+           >
+             <RefreshCw size={24} /> Play Again
+           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-           <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">History</h3>
+
+        {/* History List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-900">
+           <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Game History</h3>
            {gameState.results.map((res, idx) => (
              <div key={idx} className="flex justify-between items-center p-3 rounded bg-white/10">
                <span className="font-medium">{res.word}</span>
@@ -697,11 +698,6 @@ export default function App() {
                </span>
              </div>
            ))}
-        </div>
-        <div className="p-4 bg-gray-800">
-          <button onClick={() => setScreen('home')} className="w-full bg-yellow-400 text-black mb-20 py-4 rounded-xl font-bold text-xl shadow-lg">
-            Play Again
-          </button>
         </div>
       </div>
     );

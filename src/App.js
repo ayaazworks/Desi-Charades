@@ -14,8 +14,8 @@ import qrCodeImg from './qrcode.jpeg';
 // --- CONSTANTS ---
 const ADMOB_IDS = {
   android: {
-    banner: 'ca-app-pub-4060071785789817/3553680317',
-    interstitial: 'ca-app-pub-4060071785789817/7615396013'
+    banner: 'ca-app-pub-4060071785789817/7703203530',
+    interstitial: 'ca-app-pub-4060071785789817/7759043852'
   },
   ios: {
     banner: 'ca-app-pub-4060071785789817/1820143856',
@@ -602,22 +602,7 @@ export default function App() {
             {gameState.currentWord}
           </h1>
         </div>
-        <div className="h-24 flex">
-          <button
-            onClick={() => processAction('pass')}
-            className="flex-1 bg-red-600/90 text-white font-bold text-xl flex flex-col items-center justify-center active:bg-red-700 transition-colors"
-          >
-            <span className="text-3xl mb-1">⬇️</span>
-            PASS
-          </button>
-          <button
-            onClick={() => processAction('correct')}
-            className="flex-1 bg-green-600/90 text-white font-bold text-xl flex flex-col items-center justify-center active:bg-green-700 transition-colors"
-          >
-            <span className="text-3xl mb-1">⬆️</span>
-            CORRECT
-          </button>
-        </div>
+        {/* BUTTONS REMOVED FROM HERE */}
       </div>
     );
   }

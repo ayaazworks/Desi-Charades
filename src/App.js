@@ -146,12 +146,12 @@ export default function App() {
   // --- ADMOB CONFIGURATION (PASTE YOUR IDS HERE) ---
   const ADMOB_IDS = {
     android: {
-      banner: 'ca-app-pub-4060071785789817/3553680317', // Replace with your Banner Unit ID
-      interstitial: 'ca-app-pub-4060071785789817/7615396013' // Replace with your Interstitial Unit ID
+      banner: 'ca-app-pub-3940256099942544/6300978111', // Replace with your Banner Unit ID
+      interstitial: 'ca-app-pub-3940256099942544/1033173712' // Replace with your Interstitial Unit ID
     },
     ios: {
-      banner: 'ca-app-pub-4060071785789817/1820143856',
-      interstitial: 'ca-app-pub-4060071785789817/8978123730'
+      banner: 'ca-app-pub-3940256099942544/2934735716',
+    interstitial: 'ca-app-pub-3940256099942544/4411468910'
     }
   };
 

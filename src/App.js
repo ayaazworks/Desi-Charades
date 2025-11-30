@@ -3,9 +3,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, RefreshCw, MessageCircle, WifiOff } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 // IMPORT NETWORK PLUGIN
-import { Network } from '@capacitor/network'; 
+import { Network } from '@capacitor/network';
 
 import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+
+// --- IMPORT YOUR QR CODE IMAGE HERE ---
+// Make sure you renamed your file to 'qrcode.jpeg' and put it in the same folder
+import qrCodeImg from './qrcode.jpeg';
 
 // --- CONSTANTS ---
 const ADMOB_IDS = {
@@ -26,66 +30,133 @@ const CATEGORIES = [
     name: 'Bollywood Movies',
     icon: '🎬',
     color: 'bg-red-500',
-    words: ['Sholay', 'DDLJ', '3 Idiots', 'Lagaan', 'Bahubali', 'KGF', 'Pushpa', 'Dangal', 'PK', 'Munna Bhai', 'Gadar', 'Don', 'RRR', 'Pathaan', 'Jawan', 'Stree', 'Drishyam', 'Hera Pheri', 'Golmaal', 'Chak De India']
+    words: ['Sholay', 'DDLJ', '3 Idiots', 'Lagaan', 'Bahubali',
+      'KGF', 'Pushpa', 'Dangal', 'PK', 'Munna Bhai', 'Gadar', 'Don',
+      'RRR', 'Pathaan', 'Jawan', 'Stree', 'Drishyam', 'Hera Pheri',
+      'Golmaal', 'Chak De India', 'Tare Zameen Par', 'Barfii', 'kick',
+      'Munna Bhai MBBS', 'Sultan', 'Chennai Express', 'Rockstar', 'Mujhse Shaadi Karogi',
+      'Bhool Bhulaiyaa', 'Gangs of Wasseypur', 'Hum Aapke Hain Koun', 'Kabhi Khushi Kabhie Gham',
+      'Gully boy', 'Animal', 'Devdas', 'Welcome', 'Dhadkan', 'Aashiqui 2', 'Raees', 'Om Shanti Om',
+      'Zindagi Na Milegi Dobara', 'My Name is Khan', 'Bajirao Mastani']
   },
   {
     id: 'cricket',
     name: 'Cricket Stars',
     icon: '🏏',
     color: 'bg-blue-600',
-    words: ['Virat Kohli', 'MS Dhoni', 'Sachin Tendulkar', 'Rohit Sharma', 'Hardik Pandya', 'Bumrah', 'Kapil Dev', 'Yuvraj Singh', 'Dravid', 'Ganguly', 'Jadeja', 'Rishabh Pant', 'Shami', 'Ashwin', 'Gill', 'Sehwag', 'Gambhir', 'Raina', 'Zaheer Khan', 'Kumble']
+    words: [
+      'Sachin Tendulkar',    // Look up at sky, Straight drive
+      'MS Dhoni',            // Helicopter shot, Wicket keeping, Captain Cool
+      'Virat Kohli',         // Aggression, Cover drive, Flying kiss
+      'Jasprit Bumrah',      // Unique bowling action (straight arms)
+      'Ravindra Jadeja',     // Sword celebration
+      'Shikhar Dhawan',      // Thigh slap (Kabaddi style)
+      'Kapil Dev',           // Natraj shot, Lifting 1983 Cup
+      'Sourav Ganguly',      // Waving shirt over head
+      'Yuvraj Singh',        // 6 Sixes gesture
+      'Rohit Sharma',        // Pull shot, Lazy elegance
+      'Hardik Pandya',       // Shrug, Swagger walk
+      'Virender Sehwag',     // Upper cut, Standing still and hitting
+      'Rahul Dravid',        // "The Wall" defense
+      'Suryakumar Yadav',    // Scoop shot (Supla shot) behind wicket
+      'Rishabh Pant',        // One-handed six, Falling while hitting
+      'Harbhajan Singh',     // Bowling action (Doosra)
+      'Lasith Malinga',      // Sling bowling action, Curly hair
+      'Chris Gayle',         // Muscle flexing, Giant bat
+      'David Warner',        // Pushpa dance step, Leaping celebration
+      'Shoaib Akhtar',       // Long run-up (running from far away), Airplane celebration
+      'Shane Warne',         // Spin bowling action, Walking up slowly
+      'AB de Villiers',      // 360-degree shots (hitting everywhere)
+      'Dwayne Bravo',        // Champion dance
+      'Gautam Gambhir',      // Intense face, Dirty jersey (always diving)
+      'Sunil Gavaskar'       // Sunny days hat, Classic defense
+    ]
   },
   {
     id: 'food',
     name: 'Desi Food',
     icon: '🍛',
     color: 'bg-yellow-500',
-    words: ['Biryani', 'Pani Puri', 'Dosa', 'Samosa', 'Butter Chicken', 'Vada Pav', 'Gulab Jamun', 'Idli', 'Chole Bhature', 'Pav Bhaji', 'Jalebi', 'Rasgulla', 'Dhokla', 'Tandoori Chicken', 'Naan', 'Lassi', 'Momos', 'Kheer', 'Rajma Chawal', 'Dal Makhani']
+    words: ['Biryani', 'Pani Puri', 'Dosa', 'Samosa', 'Butter Chicken',
+      'Vada Pav', 'Gulab Jamun', 'Idli', 'Chole Bhature', 'Pav Bhaji',
+      'Jalebi', 'Rasgulla', 'Dhokla', 'Tandoori Chicken', 'Naan', 'Lassi',
+      'Momos', 'Kheer', 'Rajma Chawal', 'Dal Makhani', 'Pizza', 'Burger', 'Pasta',
+      'Fried Rice', 'Chow Mein', 'Spring Rolls', 'Tacos', 'Burgers', 'Hot Dog',
+      'Ice Cream', 'Cupcake', 'Donut', 'Pasta', 'Sandwich', 'Fries', 'Salad', 'Poha', 'Upma']
   },
   {
     id: 'places',
     name: 'Indian Places',
     icon: '🕌',
     color: 'bg-orange-500',
-    words: ['Taj Mahal', 'Goa', 'Mumbai', 'Delhi', 'Jaipur', 'Kerala', 'Ladakh', 'Varanasi', 'Kolkata', 'Bangalore', 'Hyderabad', 'Manali', 'Shimla', 'Udaipur', 'Agra', 'Rishikesh', 'Darjeeling', 'Mysore', 'Golden Temple', 'Gateway of India']
+    words: [
+      // --- INDIA ---
+      'Taj Mahal',           // Dome shape, "Wah Taj"
+      'India Gate',          // Arch shape, Salute, Amar Jawan Jyoti
+      'Red Fort',            // Flag hoisting, Speech
+      'Goa',                 // Swimming, Drinking, Beach
+      'Golden Temple',       // Turban, Langar, Praying
+      'Statue of Unity',     // Tallest statue, Standing stiff
+      'Qutub Minar',         // Very tall tower, Looking up
+      'Hawa Mahal',          // Many windows, Wind
+      'Kerala Houseboat',    // Rowing, Backwaters
+      'Wagah Border',        // High kick marching, Aggressive handshake
+      'Howrah Bridge',       // Bridge shape, Kolkata vibe
+      'Gateway of India',    // Arch by sea, Pigeons
+      'Lotus Temple',        // Flower shape hands
+      'Dal Lake',            // Rowing Shikara, Snow
+      'Charminar',           // Four pillars
+      'Varanasi Ghats',      // Ganga Aarti (Circling lamp)
+      'Kedarnath',           // Shiva pose, Trekking up
+      'Ladakh',              // Bike riding, Cold, Mountains
+    ]
   },
   {
     id: 'festivals',
     name: 'Festivals',
     icon: '🪔',
     color: 'bg-purple-500',
-    words: ['Diwali', 'Holi', 'Eid', 'Christmas', 'Navratri', 'Durga Puja', 'Ganesh Chaturthi', 'Onam', 'Pongal', 'Raksha Bandhan', 'Janmashtami', 'Baisakhi', 'Makar Sankranti', 'Dussehra', 'Karwa Chauth', 'Lohri', 'Republic Day', 'Independence Day', 'Gandhi Jayanti', 'Mahashivratri']
+    words: ['Eid', 'Bakra Eid', 'Diwali', 'Holi', 'Eid', 'Christmas', 'Navratri', 'Durga Puja',
+      'Ganesh Chaturthi', 'Onam', 'Pongal', 'Raksha Bandhan', 'Janmashtami',
+      'Baisakhi', 'Makar Sankranti', 'Dussehra', 'Karwa Chauth', 'Lohri',
+      'Republic Day', 'Independence Day', 'Gandhi Jayanti', 'Mahashivratri', 'Gandhi Jayanti', 'childrens day',
+      'Teachers Day', 'Christmas Eve', 'New Year']
   },
   {
     id: 'actions',
     name: 'Actions',
     icon: '🎭',
     color: 'bg-pink-500',
-    words: ['Dancing', 'Sleeping', 'Cooking', 'Driving', 'Swimming', 'Singing', 'Crying', 'Laughing', 'Running', 'Fighting', 'Eating', 'Drinking', 'Reading', 'Writing', 'Thinking', 'Jumping', 'Clapping', 'Praying', 'Cleaning', 'Shopping']
+    words: ['Dancing', 'Sleeping', 'Cooking', 'Driving',
+      'Swimming', 'Singing', 'Crying', 'Laughing', 'Running', 'Fighting',
+      'Eating', 'Drinking', 'Reading', 'Writing', 'Thinking', 'Jumping', 'Clapping',
+      'Praying', 'Cleaning', 'Shopping', 'Painting', 'Gardening', 'Fishing', 'Cycling',
+      'Skating', 'Skiing', 'Hiking', 'Surfing', 'Meditating', 'Yelling', 'Whistling'
+    ]
   }
 ];
 
 const playSound = (type, enabled) => {
-    // ... (Keep existing sound code) ...
-    if (!enabled) return;
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      if (type === 'correct') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(500, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); osc.start(); osc.stop(ctx.currentTime + 0.4);
-      } else if (type === 'pass') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, ctx.currentTime); osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.2); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3); osc.start(); osc.stop(ctx.currentTime + 0.3);
-      } else if (type === 'tick') {
-        osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime); gain.gain.setValueAtTime(0.05, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05); osc.start(); osc.stop(ctx.currentTime + 0.05);
-      } else if (type === 'gameover') {
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.5); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1); osc.start(); osc.stop(ctx.currentTime + 1);
-      }
-    } catch (e) {}
+  // ... (Keep existing sound code) ...
+  if (!enabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (type === 'correct') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(500, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); osc.start(); osc.stop(ctx.currentTime + 0.4);
+    } else if (type === 'pass') {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, ctx.currentTime); osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.2); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3); osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } else if (type === 'tick') {
+      osc.type = 'square'; osc.frequency.setValueAtTime(800, ctx.currentTime); gain.gain.setValueAtTime(0.05, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05); osc.start(); osc.stop(ctx.currentTime + 0.05);
+    } else if (type === 'gameover') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.5); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1); osc.start(); osc.stop(ctx.currentTime + 1);
+    }
+  } catch (e) { }
 };
 
 const triggerVibrate = (pattern, enabled) => {
@@ -102,12 +173,12 @@ export default function App() {
     durationMinutes: 1,
   });
   const [promoCode, setPromoCode] = useState('');
-  
+
   // --- NEW: INTERNET CHECK STATE ---
   const [isOnline, setIsOnline] = useState(true);
 
   // --- NEW: WHATSAPP NUMBER (REPLACE THIS WITH YOURS) ---
-  const MY_PHONE_NUMBER = "919876543210"; // Country Code + Number (No + symbol)
+  const MY_PHONE_NUMBER = "919897951097"; // Country Code + Number (No + symbol)
 
   // --- NEW: INTERNET CHECK LOGIC ---
   useEffect(() => {
@@ -246,7 +317,7 @@ export default function App() {
         const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
         await AdMob.prepareInterstitial({ adId: ids.interstitial });
         await AdMob.showInterstitial();
-      } catch (e) {}
+      } catch (e) { }
     }
     setScreen('result');
   }, [settings.adsRemoved, settings.sound, settings.vibration, isOnline]);
@@ -260,7 +331,7 @@ export default function App() {
       const currentWord = prev.currentWord;
       const newResults = [...prev.results, { word: currentWord, status: action }];
       const newScore = { ...prev.score };
-      if (action === 'correct') { newScore.correct += 1; playSound('correct', settings.sound); triggerVibrate(100, settings.vibration); } 
+      if (action === 'correct') { newScore.correct += 1; playSound('correct', settings.sound); triggerVibrate(100, settings.vibration); }
       else { newScore.pass += 1; playSound('pass', settings.sound); triggerVibrate([50, 50, 50], settings.vibration); }
       return { ...prev, score: newScore, results: newResults };
     });
@@ -296,7 +367,7 @@ export default function App() {
 
   const requestTiltPermission = async () => {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try { await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+      try { await DeviceOrientationEvent.requestPermission(); } catch (e) { }
     }
   };
 
@@ -309,17 +380,17 @@ export default function App() {
   if (!isOnline) {
     return (
       <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center p-8 text-center">
-         <div className="bg-red-500/20 p-6 rounded-full mb-6 animate-pulse">
-            <WifiOff size={64} className="text-red-500" />
-         </div>
-         <h2 className="text-3xl font-bold text-white mb-2">No Internet!</h2>
-         <p className="text-gray-300 text-lg mb-8">Please turn on your Data or WiFi to play Desi Charades.</p>
-         <button 
-           onClick={() => window.location.reload()} 
-           className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold"
-         >
-           Try Again
-         </button>
+        <div className="bg-red-500/20 p-6 rounded-full mb-6 animate-pulse">
+          <WifiOff size={64} className="text-red-500" />
+        </div>
+        <h2 className="text-3xl font-bold text-white mb-2">No Internet!</h2>
+        <p className="text-gray-300 text-lg mb-8">Please turn on your Data or WiFi to play Desi Charades.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -327,7 +398,13 @@ export default function App() {
   // --- STANDARD SCREENS ---
 
   if (screen === 'splash') {
-    return ( <div className="h-screen w-full bg-indigo-900 flex flex-col items-center justify-center text-white"> <div className="text-6xl mb-4 animate-bounce">🇮🇳</div> <h1 className="text-4xl font-bold tracking-wider mb-2">DESI CHARADES</h1> <p className="text-indigo-300">Loading Game...</p> </div> );
+    return (
+      <div className="h-screen w-full bg-indigo-900 flex flex-col items-center justify-center text-white">
+        <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
+        <h1 className="text-4xl font-bold tracking-wider mb-2">DESI CHARADES</h1>
+        <p className="text-indigo-300">Loading Game...</p>
+      </div>
+    );
   }
 
   if (screen === 'home') {
@@ -341,8 +418,17 @@ export default function App() {
           <div className="w-48 h-48 bg-white/10 rounded-full flex items-center justify-center border-4 border-yellow-400 shadow-lg shadow-yellow-500/20 mb-8"> <Smartphone size={80} className="text-yellow-400" /> </div>
           <button onClick={() => setScreen('category')} className="w-full max-w-xs bg-yellow-400 text-indigo-900 py-4 rounded-xl text-xl font-black shadow-lg transform active:scale-95 transition-transform flex items-center justify-center gap-2"> <Play fill="currentColor" /> PLAY GAME </button>
           <button onClick={() => setScreen('howtoplay')} className="w-full max-w-xs bg-white/20 py-3 rounded-xl font-bold backdrop-blur-sm"> How To Play </button>
-
         </div>
+
+        {/* --- ADDED DEVELOPER CREDITS HERE --- */}
+        <div className="pb-6 text-center">
+          <p className="text-indigo-300 text-sm font-bold flex items-center justify-center gap-1">
+            Made with <span className="text-red-500 animate-pulse">❤️</span> in India
+          </p>
+          <p className="text-indigo-400/60 text-xs mt-1">Developer: Mohd Ayaaz Siddiqui</p>
+        </div>
+        {/* ------------------------------------ */}
+
       </div>
     );
   }
@@ -366,7 +452,7 @@ export default function App() {
               <div className="flex items-center gap-3"> <Smartphone className={settings.vibration ? "text-green-400" : "text-red-400"} /> <span>Vibration</span> </div>
               <button onClick={() => setSettings(s => ({ ...s, vibration: !s.vibration }))} className={`w-12 h-6 rounded-full relative ${settings.vibration ? 'bg-green-500' : 'bg-gray-600'}`}> <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.vibration ? 'right-1' : 'left-1'}`} /> </button>
             </div>
-            
+
             {/* --- UPDATED PREMIUM SECTION WITH WHATSAPP --- */}
             <div className="mt-8">
               <h3 className="text-gray-400 mb-2 uppercase text-sm font-bold tracking-wider"> Unlock Premium </h3>
@@ -379,12 +465,18 @@ export default function App() {
                     <input type="text" placeholder="Enter Code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} className="flex-1 bg-black/40 border border-gray-600 rounded-lg px-4 py-3 text-white uppercase tracking-widest font-bold focus:outline-none focus:border-yellow-400 transition-colors" />
                     <button onClick={handleUnlock} className="bg-yellow-400 text-black font-black px-6 py-2 rounded-lg hover:bg-yellow-300 active:scale-95 transition-transform"> GO </button>
                   </div>
-                  
+
+                  {/* --- QR CODE IMAGE INSERTED HERE --- */}
+                  <div className="flex justify-center my-4">
+                    <img src={qrCodeImg} alt="Payment QR Code" className="w-48 h-48 rounded-lg border-4 border-white shadow-lg" />
+                  </div>
+                  {/* ----------------------------------- */}
+
                   {/* WHATSAPP BUTTON */}
                   <div className="pt-2 border-t border-gray-700">
-                    <p className="text-xs text-gray-400 mb-2 text-center">To get a code, pay ₹50 via UPI and share screenshot on WhatsApp: 
+                    <p className="text-xs text-gray-400 mb-2 text-center">To Support Me, pay ₹50 via UPI and share screenshot on WhatsApp and get Secret Code.
                     </p>
-                    <button 
+                    <button
                       onClick={openWhatsApp}
                       className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 font-bold transition-colors"
                     >
@@ -411,8 +503,8 @@ export default function App() {
   // (Keep Category, Duration, Prep, Game, and Result screens exactly as they were in the previous step)
   // ...
   if (screen === 'category') {
-      // ... (Paste Category Screen Logic Here)
-      return (
+    // ... (Paste Category Screen Logic Here)
+    return (
       <div className="min-h-screen bg-gray-900 text-white p-4">
         <div className="flex items-center mb-6">
           <button onClick={() => setScreen('home')} className="p-2 mr-4">
@@ -439,7 +531,7 @@ export default function App() {
     );
   }
   if (screen === 'duration') {
-     // ... (Paste Duration Screen Logic Here)
+    // ... (Paste Duration Screen Logic Here)
     return (
       <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
         <div className="flex items-center mb-6">
@@ -463,7 +555,7 @@ export default function App() {
     );
   }
   if (screen === 'prep') {
-      // ... (Paste Prep Screen Logic Here)
+    // ... (Paste Prep Screen Logic Here)
     return (
       <div className={`h-screen w-full bg-black text-white flex flex-col items-center justify-center p-8 text-center transition-colors duration-500 ${isLandscape ? 'bg-green-900' : 'bg-red-900'}`}>
         {!isLandscape ? (
@@ -483,7 +575,7 @@ export default function App() {
     );
   }
   if (screen === 'game') {
-     // ... (Paste Game Screen Logic Here)
+    // ... (Paste Game Screen Logic Here)
     const catData = CATEGORIES.find(c => c.id === gameState.category);
     return (
       <div className={`h-screen w-full ${catData.color} flex flex-col relative overflow-hidden`}>
@@ -530,7 +622,7 @@ export default function App() {
     );
   }
   if (screen === 'result') {
-      // ... (Paste Result Screen Logic Here)
+    // ... (Paste Result Screen Logic Here)
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col">
         {/* Header and Score */}

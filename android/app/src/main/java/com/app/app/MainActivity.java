@@ -1,4 +1,4 @@
-package com.ayaazatomdesicharades.app;
+package com.indiacharades.app;
 
 import com.getcapacitor.BridgeActivity;
 

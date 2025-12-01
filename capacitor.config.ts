@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.indiacharadespartygame.app',
-  appName: 'Indian Charades: Party Game',
+  appId: 'com.indiacharades.app',
+  appName: 'Indian Charades: Word Party Game',
   webDir: 'build',
 
   plugins: {

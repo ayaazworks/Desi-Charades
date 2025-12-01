@@ -14,8 +14,8 @@ import qrCodeImg from './qrcode.jpeg';
 // --- CONSTANTS ---
 const ADMOB_IDS = {
   android: {
-    banner: 'ca-app-pub-4060071785789817/7703203530',
-    interstitial: 'ca-app-pub-4060071785789817/7759043852'
+    banner: 'ca-app-pub-4060071785789817/7965382826',
+    interstitial: 'ca-app-pub-4060071785789817/6954170594'
   },
   ios: {
     banner: 'ca-app-pub-4060071785789817/1820143856',

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Indian Charades: Party Game</string>
-    <string name="title_activity_main">Desi-Charades-Headband-game</string>
-    <string name="package_name">com.ayaazatomdesicharades.app</string>
-    <string name="custom_url_scheme">com.ayaazatomdesicharades.app</string>
+    <string name="app_name">Indian Charades: Word Party Game</string>
+    <string name="title_activity_main">Indian Charades: Word Party Game</string>
+    <string name="package_name">com.indiacharades.app</string>
+    <string name="custom_url_scheme">com.indiacharades.app</string>
 </resources>

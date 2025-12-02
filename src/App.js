@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// ADDED 'MessageCircle' (for WhatsApp) and 'WifiOff' (for No Internet)
-import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, RefreshCw, MessageCircle, WifiOff } from 'lucide-react';
+import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, ChevronRight, RefreshCw, MessageCircle, WifiOff, FileText } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
-// IMPORT NETWORK PLUGIN
 import { Network } from '@capacitor/network';
-
 import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
 
 // --- IMPORT YOUR QR CODE IMAGE HERE ---
-// Make sure you renamed your file to 'qrcode.jpeg' and put it in the same folder
 import qrCodeImg from './qrcode.jpeg';
 
 // --- CONSTANTS ---
@@ -23,7 +19,6 @@ const ADMOB_IDS = {
   }
 };
 
-// ... (Keep CATEGORIES and SOUND UTILITIES exactly the same as before) ...
 const CATEGORIES = [
   {
     id: 'bollywood',
@@ -44,100 +39,39 @@ const CATEGORIES = [
     name: 'Cricket Stars',
     icon: '🏏',
     color: 'bg-blue-600',
-    words: [
-      'Sachin Tendulkar',    // Look up at sky, Straight drive
-      'MS Dhoni',            // Helicopter shot, Wicket keeping, Captain Cool
-      'Virat Kohli',         // Aggression, Cover drive, Flying kiss
-      'Jasprit Bumrah',      // Unique bowling action (straight arms)
-      'Ravindra Jadeja',     // Sword celebration
-      'Shikhar Dhawan',      // Thigh slap (Kabaddi style)
-      'Kapil Dev',           // Natraj shot, Lifting 1983 Cup
-      'Sourav Ganguly',      // Waving shirt over head
-      'Yuvraj Singh',        // 6 Sixes gesture
-      'Rohit Sharma',        // Pull shot, Lazy elegance
-      'Hardik Pandya',       // Shrug, Swagger walk
-      'Virender Sehwag',     // Upper cut, Standing still and hitting
-      'Rahul Dravid',        // "The Wall" defense
-      'Suryakumar Yadav',    // Scoop shot (Supla shot) behind wicket
-      'Rishabh Pant',        // One-handed six, Falling while hitting
-      'Harbhajan Singh',     // Bowling action (Doosra)
-      'Lasith Malinga',      // Sling bowling action, Curly hair
-      'Chris Gayle',         // Muscle flexing, Giant bat
-      'David Warner',        // Pushpa dance step, Leaping celebration
-      'Shoaib Akhtar',       // Long run-up (running from far away), Airplane celebration
-      'Shane Warne',         // Spin bowling action, Walking up slowly
-      'AB de Villiers',      // 360-degree shots (hitting everywhere)
-      'Dwayne Bravo',        // Champion dance
-      'Gautam Gambhir',      // Intense face, Dirty jersey (always diving)
-      'Sunil Gavaskar'       // Sunny days hat, Classic defense
-    ]
+    words: ['Sachin Tendulkar', 'MS Dhoni', 'Virat Kohli', 'Jasprit Bumrah', 'Ravindra Jadeja', 'Shikhar Dhawan', 'Kapil Dev', 'Sourav Ganguly', 'Yuvraj Singh', 'Rohit Sharma', 'Hardik Pandya', 'Virender Sehwag', 'Rahul Dravid', 'Suryakumar Yadav', 'Rishabh Pant', 'Harbhajan Singh', 'Lasith Malinga', 'Chris Gayle', 'David Warner', 'Shoaib Akhtar', 'Shane Warne', 'AB de Villiers', 'Dwayne Bravo', 'Gautam Gambhir', 'Sunil Gavaskar']
   },
   {
     id: 'food',
     name: 'Desi Food',
     icon: '🍛',
     color: 'bg-yellow-500',
-    words: ['Biryani', 'Pani Puri', 'Dosa', 'Samosa', 'Butter Chicken',
-      'Vada Pav', 'Gulab Jamun', 'Idli', 'Chole Bhature', 'Pav Bhaji',
-      'Jalebi', 'Rasgulla', 'Dhokla', 'Tandoori Chicken', 'Naan', 'Lassi',
-      'Momos', 'Kheer', 'Rajma Chawal', 'Dal Makhani', 'Pizza', 'Burger', 'Pasta',
-      'Fried Rice', 'Chow Mein', 'Spring Rolls', 'Tacos', 'Burgers', 'Hot Dog',
-      'Ice Cream', 'Cupcake', 'Donut', 'Pasta', 'Sandwich', 'Fries', 'Salad', 'Poha', 'Upma']
+    words: ['Biryani', 'Pani Puri', 'Dosa', 'Samosa', 'Butter Chicken', 'Vada Pav', 'Gulab Jamun', 'Idli', 'Chole Bhature', 'Pav Bhaji', 'Jalebi', 'Rasgulla', 'Dhokla', 'Tandoori Chicken', 'Naan', 'Lassi', 'Momos', 'Kheer', 'Rajma Chawal', 'Dal Makhani', 'Pizza', 'Burger', 'Pasta', 'Fried Rice', 'Chow Mein', 'Spring Rolls', 'Tacos', 'Burgers', 'Hot Dog', 'Ice Cream', 'Cupcake', 'Donut', 'Pasta', 'Sandwich', 'Fries', 'Salad', 'Poha', 'Upma']
   },
   {
     id: 'places',
     name: 'Indian Places',
     icon: '🕌',
     color: 'bg-orange-500',
-    words: [
-      // --- INDIA ---
-      'Taj Mahal',           // Dome shape, "Wah Taj"
-      'India Gate',          // Arch shape, Salute, Amar Jawan Jyoti
-      'Red Fort',            // Flag hoisting, Speech
-      'Goa',                 // Swimming, Drinking, Beach
-      'Golden Temple',       // Turban, Langar, Praying
-      'Statue of Unity',     // Tallest statue, Standing stiff
-      'Qutub Minar',         // Very tall tower, Looking up
-      'Hawa Mahal',          // Many windows, Wind
-      'Kerala Houseboat',    // Rowing, Backwaters
-      'Wagah Border',        // High kick marching, Aggressive handshake
-      'Howrah Bridge',       // Bridge shape, Kolkata vibe
-      'Gateway of India',    // Arch by sea, Pigeons
-      'Lotus Temple',        // Flower shape hands
-      'Dal Lake',            // Rowing Shikara, Snow
-      'Charminar',           // Four pillars
-      'Varanasi Ghats',      // Ganga Aarti (Circling lamp)
-      'Kedarnath',           // Shiva pose, Trekking up
-      'Ladakh',              // Bike riding, Cold, Mountains
-    ]
+    words: ['Taj Mahal', 'India Gate', 'Red Fort', 'Goa', 'Golden Temple', 'Statue of Unity', 'Qutub Minar', 'Hawa Mahal', 'Kerala Houseboat', 'Wagah Border', 'Howrah Bridge', 'Gateway of India', 'Lotus Temple', 'Dal Lake', 'Charminar', 'Varanasi Ghats', 'Kedarnath', 'Ladakh']
   },
   {
     id: 'festivals',
     name: 'Festivals',
     icon: '🪔',
     color: 'bg-purple-500',
-    words: ['Eid', 'Bakra Eid', 'Diwali', 'Holi', 'Eid', 'Christmas', 'Navratri', 'Durga Puja',
-      'Ganesh Chaturthi', 'Onam', 'Pongal', 'Raksha Bandhan', 'Janmashtami',
-      'Baisakhi', 'Makar Sankranti', 'Dussehra', 'Karwa Chauth', 'Lohri',
-      'Republic Day', 'Independence Day', 'Gandhi Jayanti', 'Mahashivratri', 'Gandhi Jayanti', 'childrens day',
-      'Teachers Day', 'Christmas Eve', 'New Year']
+    words: ['Eid', 'Bakra Eid', 'Diwali', 'Holi', 'Eid', 'Christmas', 'Navratri', 'Durga Puja', 'Ganesh Chaturthi', 'Onam', 'Pongal', 'Raksha Bandhan', 'Janmashtami', 'Baisakhi', 'Makar Sankranti', 'Dussehra', 'Karwa Chauth', 'Lohri', 'Republic Day', 'Independence Day', 'Gandhi Jayanti', 'Mahashivratri', 'Gandhi Jayanti', 'childrens day', 'Teachers Day', 'Christmas Eve', 'New Year']
   },
   {
     id: 'actions',
     name: 'Actions',
     icon: '🎭',
     color: 'bg-pink-500',
-    words: ['Dancing', 'Sleeping', 'Cooking', 'Driving',
-      'Swimming', 'Singing', 'Crying', 'Laughing', 'Running', 'Fighting',
-      'Eating', 'Drinking', 'Reading', 'Writing', 'Thinking', 'Jumping', 'Clapping',
-      'Praying', 'Cleaning', 'Shopping', 'Painting', 'Gardening', 'Fishing', 'Cycling',
-      'Skating', 'Skiing', 'Hiking', 'Surfing', 'Meditating', 'Yelling', 'Whistling'
-    ]
+    words: ['Dancing', 'Sleeping', 'Cooking', 'Driving', 'Swimming', 'Singing', 'Crying', 'Laughing', 'Running', 'Fighting', 'Eating', 'Drinking', 'Reading', 'Writing', 'Thinking', 'Jumping', 'Clapping', 'Praying', 'Cleaning', 'Shopping', 'Painting', 'Gardening', 'Fishing', 'Cycling', 'Skating', 'Skiing', 'Hiking', 'Surfing', 'Meditating', 'Yelling', 'Whistling']
   }
 ];
 
 const playSound = (type, enabled) => {
-  // ... (Keep existing sound code) ...
   if (!enabled) return;
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -173,35 +107,24 @@ export default function App() {
     durationMinutes: 1,
   });
   const [promoCode, setPromoCode] = useState('');
-
-  // --- NEW: INTERNET CHECK STATE ---
   const [isOnline, setIsOnline] = useState(true);
+  const MY_PHONE_NUMBER = "919897951097";
 
-  // --- NEW: WHATSAPP NUMBER (REPLACE THIS WITH YOURS) ---
-  const MY_PHONE_NUMBER = "919897951097"; // Country Code + Number (No + symbol)
-
-  // --- NEW: INTERNET CHECK LOGIC ---
+  // --- INTERNET CHECK LOGIC ---
   useEffect(() => {
-    // 1. Check status immediately on load
     const checkStatus = async () => {
       const status = await Network.getStatus();
       setIsOnline(status.connected);
     };
     checkStatus();
-
-    // 2. Listen for changes (User turns off Wifi)
     const listener = Network.addListener('networkStatusChange', status => {
       console.log('Network status changed', status);
       setIsOnline(status.connected);
     });
-
-    // Cleanup
-    return () => {
-      listener.then(handler => handler.remove());
-    };
+    return () => { listener.then(handler => handler.remove()); };
   }, []);
 
-  // --- EXISTING STARTUP LOGIC ---
+  // --- SETTINGS LOAD ---
   useEffect(() => {
     const loadSettings = async () => {
       const { value } = await Preferences.get({ key: 'adsRemoved' });
@@ -222,14 +145,59 @@ export default function App() {
     }
   };
 
-  // --- NEW: OPEN WHATSAPP FUNCTION ---
   const openWhatsApp = () => {
-    const text = "Hi, here is the payment screenshot for Desi Charades.";
-    // _system ensures it opens in the actual WhatsApp app, not inside the game
+    const text = "Hi, here is the payment screenshot for Indian Charades.";
     window.open(`https://wa.me/${MY_PHONE_NUMBER}?text=${encodeURIComponent(text)}`, '_system');
   };
 
-  // ... (Keep Game State and Logic exactly the same) ...
+  // --- AD MANAGEMENT LOGIC ---
+  const manageAds = useCallback(async () => {
+    if (settings.adsRemoved || !isOnline) {
+      try { await AdMob.hideBanner(); } catch (e) { console.log('Ad hide error', e); }
+      return;
+    }
+
+    // HIDE ADS during intense gameplay/prep to prevent policy violation
+    if (screen === 'prep' || screen === 'game') {
+      try { await AdMob.hideBanner(); } catch (e) { console.log('Ad hide error', e); }
+      return;
+    }
+
+    // SHOW ADS on safe screens (Home, Result, Settings, Privacy, etc.)
+    try {
+      await AdMob.initialize();
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
+      
+      await AdMob.showBanner({ 
+        adId: ids.banner, 
+        position: BannerAdPosition.BOTTOM_CENTER, 
+        margin: 0, 
+        size: BannerAdSize.BANNER 
+      });
+    } catch (e) { 
+      console.error("AdMob Init/Show Error:", e); 
+    }
+  }, [settings.adsRemoved, isOnline, screen]);
+
+  useEffect(() => {
+    manageAds();
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    
+    const timer = setTimeout(() => { 
+        setScreen(current => current === 'splash' ? 'home' : current); 
+    }, 2500);
+
+    return () => { 
+        clearTimeout(timer); 
+        window.removeEventListener('resize', checkOrientation); 
+        window.removeEventListener('orientationchange', checkOrientation); 
+    };
+  }, [manageAds]);
+
+  // ... (Game State Logic) ...
   const [gameState, setGameState] = useState({ category: null, score: { correct: 0, pass: 0 }, wordsQueue: [], currentWord: '', timeLeft: 0, isActive: false, results: [] });
   const [prepTimer, setPrepTimer] = useState(3);
   const [isLandscape, setIsLandscape] = useState(false);
@@ -237,26 +205,6 @@ export default function App() {
   const waitingForNeutral = useRef(true);
 
   const checkOrientation = useCallback(() => { const isLand = window.innerWidth > window.innerHeight; setIsLandscape(isLand); }, []);
-
-  const initializeAds = useCallback(async () => {
-    if (settings.adsRemoved) return;
-    if (!isOnline) return; // Don't try to load ads if offline
-    try {
-      await AdMob.initialize();
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
-      await AdMob.showBanner({ adId: ids.banner, position: BannerAdPosition.BOTTOM_CENTER, margin: 0, size: BannerAdSize.BANNER });
-    } catch (e) { console.error("AdMob Init Error:", e); }
-  }, [settings.adsRemoved, isOnline]);
-
-  useEffect(() => {
-    initializeAds();
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-    const timer = setTimeout(() => { setScreen('home'); }, 2500);
-    return () => { clearTimeout(timer); window.removeEventListener('resize', checkOrientation); window.removeEventListener('orientationchange', checkOrientation); };
-  }, []);
 
   const startGameFlow = (duration) => {
     setSettings(prev => ({ ...prev, durationMinutes: duration }));
@@ -311,13 +259,14 @@ export default function App() {
     setGameState(prev => ({ ...prev, isActive: false }));
     playSound('gameover', settings.sound);
     triggerVibrate(500, settings.vibration);
-    if (!settings.adsRemoved && isOnline) { // Only show interstitial if online
+    
+    if (!settings.adsRemoved && isOnline) { 
       try {
         const isAndroid = /Android/i.test(navigator.userAgent);
         const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
         await AdMob.prepareInterstitial({ adId: ids.interstitial });
         await AdMob.showInterstitial();
-      } catch (e) { }
+      } catch (e) { console.log('Interstitial failed', e); }
     }
     setScreen('result');
   }, [settings.adsRemoved, settings.sound, settings.vibration, isOnline]);
@@ -375,8 +324,7 @@ export default function App() {
     const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // --- NEW: NO INTERNET BLOCKING SCREEN ---
-  // This sits 'above' everything else using absolute positioning and z-index 50
+  // --- NO INTERNET BLOCKING SCREEN ---
   if (!isOnline) {
     return (
       <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center p-8 text-center">
@@ -384,7 +332,7 @@ export default function App() {
           <WifiOff size={64} className="text-red-500" />
         </div>
         <h2 className="text-3xl font-bold text-white mb-2">No Internet!</h2>
-        <p className="text-gray-300 text-lg mb-8">Please turn on your Data or WiFi to play Desi Charades.</p>
+        <p className="text-gray-300 text-lg mb-8">Please turn on your Data or WiFi to play Indian Charades.</p>
         <button
           onClick={() => window.location.reload()}
           className="bg-white text-gray-900 px-8 py-3 rounded-full font-bold"
@@ -401,7 +349,7 @@ export default function App() {
     return (
       <div className="h-screen w-full bg-indigo-900 flex flex-col items-center justify-center text-white">
         <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
-        <h1 className="text-4xl font-bold tracking-wider mb-2">DESI CHARADES</h1>
+        <h1 className="text-4xl font-bold tracking-wider mb-2">Indian CHARADES</h1>
         <p className="text-indigo-300">Loading Game...</p>
       </div>
     );
@@ -411,7 +359,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 text-white flex flex-col">
         <div className="p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Desi Charades</h1>
+          <h1 className="text-2xl font-bold">Indian Charades</h1>
           <button onClick={() => setScreen('settings')} className="p-2 bg-white/10 rounded-full"> <Settings size={24} /> </button>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
@@ -419,16 +367,12 @@ export default function App() {
           <button onClick={() => setScreen('category')} className="w-full max-w-xs bg-yellow-400 text-indigo-900 py-4 rounded-xl text-xl font-black shadow-lg transform active:scale-95 transition-transform flex items-center justify-center gap-2"> <Play fill="currentColor" /> PLAY GAME </button>
           <button onClick={() => setScreen('howtoplay')} className="w-full max-w-xs bg-white/20 py-3 rounded-xl font-bold backdrop-blur-sm"> How To Play </button>
         </div>
-
-        {/* --- ADDED DEVELOPER CREDITS HERE --- */}
         <div className="pb-6 text-center">
           <p className="text-indigo-300 text-sm font-bold flex items-center justify-center gap-1">
             Made with <span className="text-red-500 animate-pulse">❤️</span> in India
           </p>
           <p className="text-indigo-400/60 text-xs mt-1">Developer: Mohd Ayaaz Siddiqui</p>
         </div>
-        {/* ------------------------------------ */}
-
       </div>
     );
   }
@@ -441,19 +385,29 @@ export default function App() {
           <h2 className="text-2xl font-bold">{screen === 'settings' ? 'Settings' : 'How to Play'}</h2>
         </div>
         {screen === 'settings' ? (
-          <div className="space-y-4">
-            {/* Sound Toggle */}
+          <div className="space-y-4 pb-20">
             <div className="bg-white/10 p-4 rounded-xl flex justify-between items-center">
               <div className="flex items-center gap-3"> {settings.sound ? <Volume2 className="text-green-400" /> : <VolumeX className="text-red-400" />} <span>Sound Effects</span> </div>
               <button onClick={() => setSettings(s => ({ ...s, sound: !s.sound }))} className={`w-12 h-6 rounded-full relative ${settings.sound ? 'bg-green-500' : 'bg-gray-600'}`}> <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.sound ? 'right-1' : 'left-1'}`} /> </button>
             </div>
-            {/* Vibration Toggle */}
             <div className="bg-white/10 p-4 rounded-xl flex justify-between items-center">
               <div className="flex items-center gap-3"> <Smartphone className={settings.vibration ? "text-green-400" : "text-red-400"} /> <span>Vibration</span> </div>
               <button onClick={() => setSettings(s => ({ ...s, vibration: !s.vibration }))} className={`w-12 h-6 rounded-full relative ${settings.vibration ? 'bg-green-500' : 'bg-gray-600'}`}> <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.vibration ? 'right-1' : 'left-1'}`} /> </button>
             </div>
 
-            {/* --- UPDATED PREMIUM SECTION WITH WHATSAPP --- */}
+            {/* --- PRIVACY POLICY BUTTON --- */}
+            <button 
+              onClick={() => setScreen('privacy')}
+              className="w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="text-blue-400" />
+                <span>Privacy Policy</span>
+              </div>
+              <ChevronRight className="text-gray-500" />
+            </button>
+            {/* ----------------------------- */}
+
             <div className="mt-8">
               <h3 className="text-gray-400 mb-2 uppercase text-sm font-bold tracking-wider"> Unlock Premium </h3>
               {settings.adsRemoved ? (
@@ -465,21 +419,13 @@ export default function App() {
                     <input type="text" placeholder="Enter Code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} className="flex-1 bg-black/40 border border-gray-600 rounded-lg px-4 py-3 text-white uppercase tracking-widest font-bold focus:outline-none focus:border-yellow-400 transition-colors" />
                     <button onClick={handleUnlock} className="bg-yellow-400 text-black font-black px-6 py-2 rounded-lg hover:bg-yellow-300 active:scale-95 transition-transform"> GO </button>
                   </div>
-
-                  {/* --- QR CODE IMAGE INSERTED HERE --- */}
                   <div className="flex justify-center my-4">
                     <img src={qrCodeImg} alt="Payment QR Code" className="w-48 h-48 rounded-lg border-4 border-white shadow-lg" />
                   </div>
-                  {/* ----------------------------------- */}
-
-                  {/* WHATSAPP BUTTON */}
                   <div className="pt-2 border-t border-gray-700">
                     <p className="text-xs text-gray-400 mb-2 text-center">To Support Me, pay ₹50 via UPI and share screenshot on WhatsApp and get Secret Code.
                     </p>
-                    <button
-                      onClick={openWhatsApp}
-                      className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 font-bold transition-colors"
-                    >
+                    <button onClick={openWhatsApp} className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 font-bold transition-colors">
                       <MessageCircle size={20} />
                       Share Screenshot on WhatsApp
                     </button>
@@ -487,8 +433,6 @@ export default function App() {
                 </div>
               )}
             </div>
-            {/* ------------------------------------------- */}
-
           </div>
         ) : (
           <div className="space-y-6 text-gray-300">
@@ -500,10 +444,73 @@ export default function App() {
     );
   }
 
-  // (Keep Category, Duration, Prep, Game, and Result screens exactly as they were in the previous step)
-  // ...
+  // --- PRIVACY POLICY SCREEN ---
+  if (screen === 'privacy') {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-4">
+        <div className="flex items-center mb-6">
+          <button onClick={() => setScreen('settings')} className="p-2 mr-4 rounded-full hover:bg-white/10 transition-colors">
+            <ChevronLeft size={32} />
+          </button>
+          <h2 className="text-2xl font-bold">Privacy Policy</h2>
+        </div>
+
+        <div className="space-y-6 text-gray-300 overflow-y-auto pb-20">
+          <div className="bg-white/10 p-5 rounded-xl border-l-4 border-blue-500">
+            <h3 className="text-white font-bold text-lg mb-2">Your Data is Safe</h3>
+            <p className="text-sm leading-relaxed">
+              At <strong>Indian Charades</strong>, we believe in transparency. This app is designed to be fun, safe, and family-friendly.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <section>
+              <h4 className="text-white font-bold mb-2 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-green-400" /> 
+                1. No Personal Data Collection
+              </h4>
+              <p className="text-sm bg-black/20 p-4 rounded-lg">
+                We do not collect, store, or share your data. 
+                All game processing happens locally on your device.
+              </p>
+            </section>
+
+            <section>
+              <h4 className="text-white font-bold mb-2 flex items-center gap-2">
+                <Settings size={18} className="text-yellow-400" /> 
+                2. Third-Party Advertising
+              </h4>
+              <p className="text-sm bg-black/20 p-4 rounded-lg">
+                To keep this app free for everyone, we use <strong>Google AdMob</strong> to display advertisements. 
+                AdMob may collect and use standard device information (such as your Advertising ID, device type, and approximate location) to show you relevant, personalized ads.
+              </p>
+            </section>
+
+            <section>
+              <h4 className="text-white font-bold mb-2 flex items-center gap-2">
+                <Smartphone size={18} className="text-purple-400" /> 
+                3. Device Permissions
+              </h4>
+              <p className="text-sm bg-black/20 p-4 rounded-lg">
+                We only request permissions that are absolutely necessary for the game to work:
+                <ul className="list-disc pl-5 mt-2 space-y-1 text-gray-400">
+                  <li><strong>Motion & Orientation:</strong> Required to detect when you tilt your phone to guess words.</li>
+                  <li><strong>Internet:</strong> Required to load the game and display ads.</li>
+                </ul>
+              </p>
+            </section>
+          </div>
+
+          <p className="text-xs text-gray-500 text-center mt-8">
+            By using Indian Charades, you agree to this privacy policy. <br/>
+            Last updated: 2024
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === 'category') {
-    // ... (Paste Category Screen Logic Here)
     return (
       <div className="min-h-screen bg-gray-900 text-white p-4">
         <div className="flex items-center mb-6">
@@ -531,7 +538,6 @@ export default function App() {
     );
   }
   if (screen === 'duration') {
-    // ... (Paste Duration Screen Logic Here)
     return (
       <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
         <div className="flex items-center mb-6">
@@ -555,7 +561,6 @@ export default function App() {
     );
   }
   if (screen === 'prep') {
-    // ... (Paste Prep Screen Logic Here)
     return (
       <div className={`h-screen w-full bg-black text-white flex flex-col items-center justify-center p-8 text-center transition-colors duration-500 ${isLandscape ? 'bg-green-900' : 'bg-red-900'}`}>
         {!isLandscape ? (
@@ -575,7 +580,6 @@ export default function App() {
     );
   }
   if (screen === 'game') {
-    // ... (Paste Game Screen Logic Here)
     const catData = CATEGORIES.find(c => c.id === gameState.category);
     return (
       <div className={`h-screen w-full ${catData.color} flex flex-col relative overflow-hidden`}>
@@ -602,21 +606,16 @@ export default function App() {
             {gameState.currentWord}
           </h1>
         </div>
-        {/* BUTTONS REMOVED FROM HERE */}
       </div>
     );
   }
   if (screen === 'result') {
-    // ... (Paste Result Screen Logic Here)
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-        {/* Header and Score */}
         <div className="p-6 text-center bg-gray-800 shadow-md z-10">
           <h2 className="text-3xl font-bold mb-2">Time's Up!</h2>
           <div className="text-6xl font-black text-yellow-400 mb-2">{gameState.score.correct}</div>
           <p className="text-gray-400 mb-4">Correct Guesses</p>
-
-          {/* MOVED PLAY AGAIN BUTTON HERE */}
           <button
             onClick={() => setScreen('home')}
             className="w-full bg-yellow-400 text-black py-4 rounded-xl font-bold text-xl shadow-lg flex items-center justify-center gap-2"
@@ -624,8 +623,6 @@ export default function App() {
             <RefreshCw size={24} /> Play Again
           </button>
         </div>
-
-        {/* History List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-900">
           <h3 className="text-sm font-bold text-gray-500 uppercase mb-2">Game History</h3>
           {gameState.results.map((res, idx) => (

@@ -15,8 +15,8 @@ import splashBg from './splash-bg.jpg';
 // --- CONSTANTS ---
 const ADMOB_IDS = {
   android: {
-    banner: 'ca-app-pub-3940256099942544/6300978111',
-    interstitial: 'ca-app-pub-3940256099942544/1033173712'
+    banner: 'ca-app-pub-4060071785789817/7965382826',
+    interstitial: 'ca-app-pub-4060071785789817/6954170594'
   },
   ios: {
     banner: 'ca-app-pub-4060071785789817/1820143856',

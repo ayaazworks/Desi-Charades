@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, ChevronRight, RefreshCw, MessageCircle, WifiOff, FileText } from 'lucide-react';
+// --- ADDED ExternalLink TO THE IMPORTS BELOW ---
+import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, ChevronRight, RefreshCw, MessageCircle, WifiOff, FileText, Plus, Save, PenTool, Trash2, Crown, X, Pause, MousePointer2, ExternalLink } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 import { Network } from '@capacitor/network';
 import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+import { App as CapacitorApp } from '@capacitor/app';
 
-// --- IMPORT YOUR QR CODE IMAGE HERE ---
+// --- IMPORT YOUR IMAGES ---
 import qrCodeImg from './qrcode.jpeg';
+import howToPlayImg from './howtoplay.jpg';
+import splashBg from './splash-bg.jpg';
 
 // --- CONSTANTS ---
 const ADMOB_IDS = {
   android: {
-    banner: 'ca-app-pub-3940256099942544/6300978111',
-    interstitial: 'ca-app-pub-3940256099942544/1033173712'
+    banner: 'ca-app-pub-4060071785789817/7965382826',
+    interstitial: 'ca-app-pub-4060071785789817/6954170594'
   },
   ios: {
     banner: 'ca-app-pub-4060071785789817/1820143856',
@@ -19,7 +23,12 @@ const ADMOB_IDS = {
   }
 };
 
-const CATEGORIES = [
+const LINKS = {
+  privacy: "https://docs.google.com/document/d/11YqURZXba6QSVSBT_easihPFe-wxuEWUVdBwgS9nImI/edit?usp=drivesdk", 
+  terms: "https://docs.google.com/document/d/1lyCrijoJl2WFj7cfN-CBTI4oHcVsbOu7Vhqt5h6ZfqM/edit?usp=drivesdk"    
+};
+
+const DEFAULT_CATEGORIES = [
   {
     id: 'bollywood',
     name: 'Bollywood Movies',
@@ -169,33 +178,112 @@ export default function App() {
     vibration: true,
     adsRemoved: false,
     durationMinutes: 1,
+    gameMode: 'tilt', // 'tilt' or 'button'
   });
   const [promoCode, setPromoCode] = useState('');
   const [isOnline, setIsOnline] = useState(true);
   const MY_PHONE_NUMBER = "919897951097";
 
-  // --- INTERNET CHECK ---
+  // --- CUSTOM DECKS ---
+  const [customDecks, setCustomDecks] = useState([]);
+  const [newDeckName, setNewDeckName] = useState('');
+  const [newDeckEmoji, setNewDeckEmoji] = useState('🃏');
+  const [newDeckWords, setNewDeckWords] = useState('');
+  
+  // --- PAUSE STATE ---
+  const [isPaused, setIsPaused] = useState(false);
+
+  // --- PREMIUM POPUP ---
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+
+  // --- SCREEN TRACKER FOR BACK BUTTON ---
+  const currentScreenRef = useRef(screen);
+
+  useEffect(() => {
+    currentScreenRef.current = screen;
+  }, [screen]);
+
+  // --- DISABLE BACK BUTTON LOGIC ---
+  useEffect(() => {
+    const handleBackButton = async () => {
+        if (currentScreenRef.current === 'home') {
+            CapacitorApp.exitApp();
+        } else {
+            if (currentScreenRef.current === 'create' || currentScreenRef.current === 'category' || currentScreenRef.current === 'settings' || currentScreenRef.current === 'howtoplay' || currentScreenRef.current === 'privacy') {
+               setScreen('home'); 
+            }
+        }
+    };
+    const listener = CapacitorApp.addListener('backButton', handleBackButton);
+    return () => { listener.then(h => h.remove()); };
+  }, []);
+
+
+  // --- LOAD DATA ---
+  useEffect(() => {
+    const loadData = async () => {
+      const { value: adsVal } = await Preferences.get({ key: 'adsRemoved' });
+      if (adsVal === 'true') setSettings(s => ({ ...s, adsRemoved: true }));
+
+      // NEW: Load Game Mode Preference
+      const { value: modeVal } = await Preferences.get({ key: 'gameMode' });
+      if (modeVal) setSettings(s => ({ ...s, gameMode: modeVal }));
+
+      const { value: decksVal } = await Preferences.get({ key: 'custom_decks' });
+      if (decksVal) {
+        try { setCustomDecks(JSON.parse(decksVal)); } catch (e) { }
+      }
+    };
+    loadData();
+  }, []);
+
+  // --- SAVE PREFERENCES HELPER ---
+  const saveGameMode = async (mode) => {
+    setSettings(s => ({ ...s, gameMode: mode }));
+    await Preferences.set({ key: 'gameMode', value: mode });
+  };
+
+  const saveNewDeck = async () => {
+    if (!newDeckName.trim()) { alert("Please enter a deck name!"); return; }
+    if (!newDeckWords.trim()) { alert("Please add some words!"); return; }
+    const wordsArray = newDeckWords.split(',').map(w => w.trim()).filter(w => w.length > 0);
+    if (wordsArray.length < 5) { alert("Please add at least 5 words separated by commas."); return; }
+
+    const newDeck = {
+      id: `custom_${Date.now()}`,
+      name: newDeckName,
+      icon: newDeckEmoji || '🃏',
+      color: 'bg-purple-600',
+      words: wordsArray,
+      isCustom: true
+    };
+
+    const updatedDecks = [...customDecks, newDeck];
+    setCustomDecks(updatedDecks);
+    await Preferences.set({ key: 'custom_decks', value: JSON.stringify(updatedDecks) });
+    setNewDeckName(''); setNewDeckWords(''); setNewDeckEmoji('🃏');
+    setScreen('category');
+  };
+
+  const deleteDeck = async (id) => {
+    const updated = customDecks.filter(d => d.id !== id);
+    setCustomDecks(updated);
+    await Preferences.set({ key: 'custom_decks', value: JSON.stringify(updated) });
+  };
+
+  const handleCreateDeckClick = () => {
+    if (settings.adsRemoved) { setScreen('create'); } else { setShowPremiumPopup(true); }
+  };
+
+  // --- INTERNET ---
   useEffect(() => {
     const checkStatus = async () => {
       const status = await Network.getStatus();
       setIsOnline(status.connected);
     };
     checkStatus();
-    const listener = Network.addListener('networkStatusChange', status => {
-      setIsOnline(status.connected);
-    });
+    const listener = Network.addListener('networkStatusChange', status => { setIsOnline(status.connected); });
     return () => { listener.then(handler => handler.remove()); };
-  }, []);
-
-  // --- SETTINGS LOAD ---
-  useEffect(() => {
-    const loadSettings = async () => {
-      const { value } = await Preferences.get({ key: 'adsRemoved' });
-      if (value === 'true') {
-        setSettings(s => ({ ...s, adsRemoved: true }));
-      }
-    };
-    loadSettings();
   }, []);
 
   const handleUnlock = async () => {
@@ -203,9 +291,7 @@ export default function App() {
       setSettings(s => ({ ...s, adsRemoved: true }));
       await Preferences.set({ key: 'adsRemoved', value: 'true' });
       alert("Success! Ads Removed Forever. Enjoy!");
-    } else {
-      alert("Invalid Code. Try again.");
-    }
+    } else { alert("Invalid Code. Try again."); }
   };
 
   const openWhatsApp = () => {
@@ -215,14 +301,8 @@ export default function App() {
 
   // --- ADS ---
   const manageAds = useCallback(async () => {
-    if (settings.adsRemoved || !isOnline) {
-      try { await AdMob.hideBanner(); } catch (e) {}
-      return;
-    }
-    if (screen === 'prep' || screen === 'game') {
-      try { await AdMob.hideBanner(); } catch (e) {}
-      return;
-    }
+    if (settings.adsRemoved || !isOnline) { try { await AdMob.hideBanner(); } catch (e) {} return; }
+    if (screen === 'prep' || screen === 'game') { try { await AdMob.hideBanner(); } catch (e) {} return; }
     try {
       await AdMob.initialize();
       const isAndroid = /Android/i.test(navigator.userAgent);
@@ -248,56 +328,41 @@ export default function App() {
   // --- GAME STATE ---
   const [gameState, setGameState] = useState({ category: null, score: { correct: 0, pass: 0 }, wordsQueue: [], currentWord: '', timeLeft: 0, isActive: false, results: [] });
   const [prepTimer, setPrepTimer] = useState(3);
-  
-  // --- ORIENTATION & ROTATION STATES ---
   const [isSensorLandscape, setIsSensorLandscape] = useState(false);
   const [windowPortrait, setWindowPortrait] = useState(false); 
-
   const tiltLocked = useRef(false);
   const waitingForNeutral = useRef(true);
 
-
-  // --- 1. SENSOR CHECK: Detect Physical Rotation ---
+  // --- SENSOR ---
   const checkSensor = useCallback((event) => {
     if(!event) return;
-    
-    // Lock rotation logic when game starts to prevent flipping while tilting
-    if (screen === 'game') return;
-
+    if (screen === 'game') return; // Lock check when game starts
     const { gamma } = event;
     const isLand = Math.abs(gamma) > 45;
     setIsSensorLandscape(isLand);
   }, [screen]);
 
-  // --- 2. WINDOW CHECK: Detect Screen Shape ---
-  const checkWindow = useCallback(() => {
-    setWindowPortrait(window.innerWidth < window.innerHeight);
-  }, []);
+  const checkWindow = useCallback(() => { setWindowPortrait(window.innerWidth < window.innerHeight); }, []);
 
-  // Listeners
   useEffect(() => {
     const sensorListener = (e) => checkSensor(e);
     window.addEventListener('deviceorientation', sensorListener);
     window.addEventListener('resize', checkWindow);
-    
-    // Initial check
     checkWindow();
-
-    return () => { 
-      window.removeEventListener('deviceorientation', sensorListener);
-      window.removeEventListener('resize', checkWindow);
-    };
+    return () => { window.removeEventListener('deviceorientation', sensorListener); window.removeEventListener('resize', checkWindow); };
   }, [checkSensor, checkWindow]);
 
 
   const startGameFlow = (duration) => {
     setSettings(prev => ({ ...prev, durationMinutes: duration }));
-    const catData = CATEGORIES.find(c => c.id === gameState.category);
+    const allCategories = [...DEFAULT_CATEGORIES, ...customDecks];
+    const catData = allCategories.find(c => c.id === gameState.category);
     let words = [...catData.words];
     words = words.sort(() => Math.random() - 0.5);
     setGameState({ category: gameState.category, score: { correct: 0, pass: 0 }, wordsQueue: words, currentWord: words[0], timeLeft: duration * 60, isActive: false, results: [] });
     waitingForNeutral.current = true;
     tiltLocked.current = false;
+    setIsPaused(false); 
     setScreen('prep');
     setPrepTimer(3);
     requestTiltPermission();
@@ -306,7 +371,7 @@ export default function App() {
   useEffect(() => {
     let countInterval = null;
     if (screen === 'prep') {
-      // PREP: We rely on the Sensor to start the game
+      // SENSOR CHECK for auto-start (Works for both modes to ensure phone is sideways)
       if (isSensorLandscape) {
         countInterval = setInterval(() => {
           setPrepTimer(prev => {
@@ -326,9 +391,10 @@ export default function App() {
     return () => { if (countInterval) clearInterval(countInterval); };
   }, [screen, isSensorLandscape, settings.sound]);
 
+  // --- TIMER ---
   useEffect(() => {
     let interval = null;
-    if (screen === 'game' && gameState.isActive && gameState.timeLeft > 0) {
+    if (screen === 'game' && gameState.isActive && gameState.timeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
         setGameState(prev => {
           if (prev.timeLeft <= 1) { return { ...prev, timeLeft: 0 }; }
@@ -338,7 +404,7 @@ export default function App() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [screen, gameState.isActive, settings.sound]);
+  }, [screen, gameState.isActive, settings.sound, isPaused]);
 
   const endGame = useCallback(async () => {
     setGameState(prev => ({ ...prev, isActive: false }));
@@ -357,9 +423,11 @@ export default function App() {
 
   useEffect(() => { if (screen === 'game' && gameState.isActive && gameState.timeLeft === 0) { endGame(); } }, [gameState.timeLeft, screen, gameState.isActive, endGame]);
 
+  // --- PROCESS ACTION (CORRECTED) ---
   const processAction = useCallback((action) => {
     if (tiltLocked.current) return;
     tiltLocked.current = true;
+    
     setGameState(prev => {
       const currentWord = prev.currentWord;
       const newResults = [...prev.results, { word: currentWord, status: action }];
@@ -368,19 +436,37 @@ export default function App() {
       else { newScore.pass += 1; playSound('pass', settings.sound); triggerVibrate([50, 50, 50], settings.vibration); }
       return { ...prev, score: newScore, results: newResults };
     });
-    waitingForNeutral.current = true;
-    setTimeout(() => {
-      setGameState(prev => {
-        const nextQueue = prev.wordsQueue.slice(1);
-        if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
-        return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
-      });
-    }, 500);
-  }, [settings.sound, settings.vibration, endGame]);
+
+    // AUTO UNLOCK FOR BUTTON MODE
+    if (settings.gameMode === 'button') {
+        setTimeout(() => {
+            setGameState(prev => {
+                const nextQueue = prev.wordsQueue.slice(1);
+                if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
+                return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
+            });
+            tiltLocked.current = false; // Unlock immediately
+        }, 500);
+    } else {
+        // TILT MODE: Require physical reset
+        waitingForNeutral.current = true;
+        setTimeout(() => {
+            setGameState(prev => {
+                const nextQueue = prev.wordsQueue.slice(1);
+                if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
+                return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
+            });
+        }, 500);
+    }
+  }, [settings.sound, settings.vibration, endGame, settings.gameMode]);
 
   // --- GAMEPLAY TILT ---
   const handleGameTilt = useCallback((event) => {
-    if (screen !== 'game' || !gameState.isActive) return;
+    if (screen !== 'game' || !gameState.isActive || isPaused) return; 
+    
+    // IF BUTTON MODE, STOP HERE (Disable sensors)
+    if (settings.gameMode === 'button') return;
+
     const { gamma } = event;
     const TILT_THRESHOLD = 40;
     const NEUTRAL_THRESHOLD = 15;
@@ -397,7 +483,7 @@ export default function App() {
     if (gamma < -TILT_THRESHOLD) { processAction('correct'); }
     else if (gamma > TILT_THRESHOLD) { processAction('pass'); }
     
-  }, [screen, gameState.isActive, processAction]);
+  }, [screen, gameState.isActive, processAction, isPaused, settings.gameMode]);
 
   useEffect(() => {
     const listener = (e) => handleGameTilt(e);
@@ -415,25 +501,12 @@ export default function App() {
     const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  // --- ROTATION LOGIC ---
   const needsForceRotation = (screen === 'game' || screen === 'prep') && windowPortrait;
-
   const rotationStyle = needsForceRotation ? {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    width: '100vh',
-    height: '100vw',
-    transform: 'translate(-50%, -50%) rotate(90deg)',
-    overflow: 'hidden',
-    zIndex: 9999
-    // Removed "background: inherit" to restore colors!
-  } : {
-    width: '100%',
-    height: '100vh'
-  };
+    position: 'fixed', top: '50%', left: '50%', width: '100vh', height: '100vw',
+    transform: 'translate(-50%, -50%) rotate(90deg)', overflow: 'hidden', zIndex: 9999
+  } : { width: '100%', height: '100vh' };
 
-  // --- NO INTERNET BLOCKING SCREEN ---
   if (!isOnline) {
     return (
       <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center p-8 text-center">
@@ -449,43 +522,122 @@ export default function App() {
 
   if (screen === 'splash') {
     return (
-      <div className="h-screen w-full bg-indigo-900 flex flex-col items-center justify-center text-white">
-        <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
-        <h1 className="text-4xl font-bold tracking-wider mb-2">Indian CHARADES</h1>
-        <p className="text-indigo-300">Loading Game...</p>
+      <div 
+        className="h-screen w-full flex flex-col items-center justify-center text-white"
+        style={{ 
+          backgroundImage: `url(${splashBg})`, 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center' 
+        }}
+      >
+        <div className="bg-black/40 absolute inset-0 z-0" />
+        <div className="z-10 flex flex-col items-center">
+            <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
+            <h1 className="text-4xl font-bold tracking-wider mb-2 drop-shadow-lg">Indian CHARADES</h1>
+            <p className="text-indigo-100 drop-shadow-md">Loading Game...</p>
+        </div>
       </div>
     );
   }
 
   if (screen === 'home') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 text-white flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 text-white flex flex-col pb-24">
+        {showPremiumPopup && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-400/50 text-center w-full max-w-sm relative shadow-2xl">
+              <button onClick={() => setShowPremiumPopup(false)} className="absolute top-2 right-2 text-gray-400 hover:text-white"> <X size={24} /> </button>
+              <Crown size={48} className="text-yellow-400 mx-auto mb-4 animate-bounce" />
+              <h3 className="text-2xl font-bold text-white mb-2">VIP Feature</h3>
+              <p className="text-gray-300 mb-6">Unlock Premium to create unlimited custom decks for you and your friends!</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowPremiumPopup(false)} className="flex-1 py-3 rounded-xl font-bold text-gray-400 bg-white/5 hover:bg-white/10"> Cancel </button>
+                <button onClick={() => { setShowPremiumPopup(false); setScreen('settings'); }} className="flex-1 bg-yellow-400 text-black py-3 rounded-xl font-bold hover:bg-yellow-300"> Unlock Now </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="p-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Indian Charades</h1>
           <button onClick={() => setScreen('settings')} className="p-2 bg-white/10 rounded-full"> <Settings size={24} /> </button>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
-          <div className="w-48 h-48 bg-white/10 rounded-full flex items-center justify-center border-4 border-yellow-400 shadow-lg shadow-yellow-500/20 mb-8"> <Smartphone size={80} className="text-yellow-400" /> </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-4">
+          <div className="w-48 h-48 bg-white/10 rounded-full flex items-center justify-center border-4 border-yellow-400 shadow-lg shadow-yellow-500/20 mb-4"> <Smartphone size={80} className="text-yellow-400" /> </div>
           <button onClick={() => setScreen('category')} className="w-full max-w-xs bg-yellow-400 text-indigo-900 py-4 rounded-xl text-xl font-black shadow-lg transform active:scale-95 transition-transform flex items-center justify-center gap-2"> <Play fill="currentColor" /> PLAY GAME </button>
+          <button onClick={handleCreateDeckClick} className="w-full max-w-xs bg-purple-500 text-white py-4 rounded-xl text-xl font-black shadow-lg transform active:scale-95 transition-transform flex items-center justify-center gap-2 border border-purple-400/50"> <Plus strokeWidth={3} /> CREATE DECK </button>
           <button onClick={() => setScreen('howtoplay')} className="w-full max-w-xs bg-white/20 py-3 rounded-xl font-bold backdrop-blur-sm"> How To Play </button>
-        </div>
-        <div className="pb-6 text-center">
-          <p className="text-indigo-300 text-sm font-bold flex items-center justify-center gap-1"> Made with <span className="text-red-500 animate-pulse">❤️</span> in India </p>
-          <p className="text-indigo-400/60 text-xs mt-1">Developer: Mohd Ayaaz Siddiqui</p>
         </div>
       </div>
     );
   }
 
+  // --- CREATE DECK SCREEN ---
+  if (screen === 'create') {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-4 pb-24">
+        <div className="flex items-center mb-6">
+          <button onClick={() => setScreen('home')} className="p-2 mr-4 rounded-full bg-white/10"> <ChevronLeft size={32} /> </button>
+          <h2 className="text-xl font-bold">Create Your Own Deck</h2>
+        </div>
+        <div className="space-y-6">
+          <div className="bg-blue-500/20 border border-blue-500/50 p-4 rounded-xl text-sm text-blue-200">
+            <p className="font-bold mb-1 flex items-center gap-2"><PenTool size={16}/> How to Create:</p>
+            <p>1. Give your deck a name (e.g. "Family Trip").</p>
+            <p>2. Pick an emoji.</p>
+            <p>3. Add words separated by commas (e.g. "Mom, Dad, Dog").</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-400 text-sm mb-2 font-bold">Deck Name</label>
+              <input value={newDeckName} onChange={(e) => setNewDeckName(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl text-white font-bold outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. My Best Friends" />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm mb-2 font-bold">Emoji Icon</label>
+              <input value={newDeckEmoji} onChange={(e) => setNewDeckEmoji(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl text-white font-bold outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. 🥳" maxLength={2} />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-sm mb-2 font-bold">Words (Comma Separated)</label>
+              <textarea value={newDeckWords} onChange={(e) => setNewDeckWords(e.target.value)} className="w-full bg-white/10 p-4 rounded-xl text-white h-40 outline-none focus:ring-2 focus:ring-purple-500" placeholder="Batman, Superman, Spiderman..." />
+              <p className="text-right text-xs text-gray-500 mt-1">At least 5 words required</p>
+            </div>
+            <button onClick={saveNewDeck} className="w-full bg-green-500 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"> <Save /> Save Deck </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (screen === 'settings' || screen === 'howtoplay') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4">
+      <div className="min-h-screen bg-gray-900 text-white p-4 pb-24">
         <div className="flex items-center mb-8">
           <button onClick={() => setScreen('home')} className="p-2 mr-4"> <ChevronLeft size={32} /> </button>
           <h2 className="text-2xl font-bold">{screen === 'settings' ? 'Settings' : 'How to Play'}</h2>
         </div>
         {screen === 'settings' ? (
-          <div className="space-y-4 pb-20">
+          <div className="space-y-4">
+            {/* GAME MODE TOGGLE */}
+            <div className="bg-white/10 p-4 rounded-xl">
+              <h3 className="text-gray-400 text-xs font-bold uppercase mb-3 tracking-wider">Game Mode</h3>
+              <div className="flex gap-2 bg-black/20 p-1 rounded-lg">
+                <button 
+                  onClick={() => saveGameMode('tilt')}
+                  className={`flex-1 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors ${settings.gameMode === 'tilt' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <RotateCw size={16} /> Tilt
+                </button>
+                <button 
+                  onClick={() => saveGameMode('button')}
+                  className={`flex-1 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors ${settings.gameMode === 'button' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <MousePointer2 size={16} /> Button
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                {settings.gameMode === 'tilt' ? 'Tilt phone Up/Down to play.' : 'Tap buttons on screen to play.'}
+              </p>
+            </div>
+
             <div className="bg-white/10 p-4 rounded-xl flex justify-between items-center">
               <div className="flex items-center gap-3"> {settings.sound ? <Volume2 className="text-green-400" /> : <VolumeX className="text-red-400" />} <span>Sound Effects</span> </div>
               <button onClick={() => setSettings(s => ({ ...s, sound: !s.sound }))} className={`w-12 h-6 rounded-full relative ${settings.sound ? 'bg-green-500' : 'bg-gray-600'}`}> <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.sound ? 'right-1' : 'left-1'}`} /> </button>
@@ -495,7 +647,7 @@ export default function App() {
               <button onClick={() => setSettings(s => ({ ...s, vibration: !s.vibration }))} className={`w-12 h-6 rounded-full relative ${settings.vibration ? 'bg-green-500' : 'bg-gray-600'}`}> <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${settings.vibration ? 'right-1' : 'left-1'}`} /> </button>
             </div>
             <button onClick={() => setScreen('privacy')} className="w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors">
-              <div className="flex items-center gap-3"> <FileText className="text-blue-400" /> <span>Privacy Policy</span> </div>
+              <div className="flex items-center gap-3"> <FileText className="text-blue-400" /> <span>Legal Terms & Policies</span> </div>
               <ChevronRight className="text-gray-500" />
             </button>
             <div className="mt-8">
@@ -511,7 +663,7 @@ export default function App() {
                   </div>
                   <div className="flex justify-center my-4"> <img src={qrCodeImg} alt="Payment QR Code" className="w-48 h-48 rounded-lg border-4 border-white shadow-lg" /> </div>
                   <div className="pt-2 border-t border-gray-700">
-                    <p className="text-xs text-gray-400 mb-2 text-center">To Support Me, pay ₹50 via UPI and share screenshot on WhatsApp and get Secret Code. </p>
+                    <p className="text-xs text-gray-400 mb-2 text-center">To Support Me, pay ₹100 via UPI and share screenshot on WhatsApp and get Secret Code. </p>
                     <button onClick={openWhatsApp} className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg flex items-center justify-center gap-2 font-bold transition-colors"> <MessageCircle size={20} /> Share Screenshot on WhatsApp </button>
                   </div>
                 </div>
@@ -519,9 +671,9 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6 text-gray-300">
-            <div className="bg-white/10 p-6 rounded-xl text-center"> <RotateCw size={48} className="mx-auto mb-4 text-yellow-400" /> <h3 className="text-xl font-bold text-white mb-2">1. Place on Forehead</h3> <p>Hold the phone against your forehead so your friends can see the screen, but you can't.</p> </div>
-            <div className="bg-white/10 p-6 rounded-xl text-center"> <div className="flex justify-center gap-8 mb-4"> <span className="text-green-400 font-bold">Tilt UP</span> <span className="text-red-400 font-bold">Tilt DOWN</span> </div> <h3 className="text-xl font-bold text-white mb-2">2. Tilt to Play</h3> <p>Tilt the phone <strong>UP</strong> (face sky) if you guess correctly.</p> <p className="mt-2">Tilt the phone <strong>DOWN</strong> (face floor) to pass.</p> </div>
+          <div className="flex flex-col flex-1">
+            <div className="flex-1 overflow-y-auto mb-4 p-2 bg-white/5 rounded-xl"> <img src={howToPlayImg} alt="How to Play" className="w-full h-auto rounded-lg" /> </div>
+            <button onClick={() => setScreen('category')} className="w-full bg-yellow-400 text-black py-4 rounded-xl font-bold text-xl shadow-lg flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors"> Continue <Play fill="currentColor" size={20} /> </button>
           </div>
         )}
       </div>
@@ -531,41 +683,61 @@ export default function App() {
   // --- PRIVACY POLICY SCREEN ---
   if (screen === 'privacy') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4">
+      <div className="min-h-screen bg-gray-900 text-white p-4 pb-24">
         <div className="flex items-center mb-6">
           <button onClick={() => setScreen('settings')} className="p-2 mr-4 rounded-full hover:bg-white/10 transition-colors"> <ChevronLeft size={32} /> </button>
-          <h2 className="text-2xl font-bold">Privacy Policy</h2>
+          <h2 className="text-2xl font-bold">Legal</h2>
         </div>
-        <div className="space-y-6 text-gray-300 overflow-y-auto pb-20">
-          <div className="bg-white/10 p-5 rounded-xl border-l-4 border-blue-500"> <h3 className="text-white font-bold text-lg mb-2">Your Data is Safe</h3> <p className="text-sm leading-relaxed"> At <strong>Indian Charades</strong>, we believe in transparency. This app is designed to be fun, safe, and family-friendly. </p> </div>
-          <div className="space-y-4">
-            <section> <h4 className="text-white font-bold mb-2 flex items-center gap-2"> <ShieldCheck size={18} className="text-green-400" /> 1. No Personal Data Collection </h4> <p className="text-sm bg-black/20 p-4 rounded-lg"> We do not collect, store, or share your data. All game processing happens locally on your device. </p> </section>
-            <section> <h4 className="text-white font-bold mb-2 flex items-center gap-2"> <Settings size={18} className="text-yellow-400" /> 2. Third-Party Advertising </h4> <p className="text-sm bg-black/20 p-4 rounded-lg"> To keep this app free for everyone, we use <strong>Google AdMob</strong> to display advertisements. AdMob may collect and use standard device information (such as your Advertising ID, device type, and approximate location) to show you relevant, personalized ads. </p> </section>
-            <section> <h4 className="text-white font-bold mb-2 flex items-center gap-2"> <Smartphone size={18} className="text-purple-400" /> 3. Device Permissions </h4> <p className="text-sm bg-black/20 p-4 rounded-lg"> We only request permissions that are absolutely necessary for the game to work: <ul className="list-disc pl-5 mt-2 space-y-1 text-gray-400"> <li><strong>Motion & Orientation:</strong> Required to detect when you tilt your phone to guess words.</li> <li><strong>Internet:</strong> Required to load the game and display ads.</li> </ul> </p> </section>
+        <div className="space-y-6 text-gray-300 overflow-y-auto">
+          <div className="bg-white/10 p-5 rounded-xl border-l-4 border-blue-500"> 
+            <h3 className="text-white font-bold text-lg mb-2">Transparency</h3> 
+            <p className="text-sm leading-relaxed"> We believe in open communication. Tap below to read our full policies. </p> 
           </div>
-          <p className="text-xs text-gray-500 text-center mt-8"> By using Indian Charades, you agree to this privacy policy. <br /> Last updated: 2024 </p>
+          
+          <div className="space-y-3">
+            <a href={LINKS.privacy} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors">
+              <span className="font-bold text-white flex items-center gap-3"><ShieldCheck size={20} className="text-green-400" /> Privacy Policy</span>
+              <ExternalLink size={18} className="text-gray-400" />
+            </a>
+            
+            <a href={LINKS.terms} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors">
+              <span className="font-bold text-white flex items-center gap-3"><FileText size={20} className="text-blue-400" /> Terms & Conditions</span>
+              <ExternalLink size={18} className="text-gray-400" />
+            </a>
+          </div>
         </div>
       </div>
     );
   }
 
   if (screen === 'category') {
+    const allCats = [...DEFAULT_CATEGORIES, ...customDecks];
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4">
+      <div className="min-h-screen bg-gray-900 text-white p-4 pb-24">
         <div className="flex items-center mb-6">
           <button onClick={() => setScreen('home')} className="p-2 mr-4"> <ChevronLeft size={32} /> </button>
           <h2 className="text-xl font-bold">Choose Category</h2>
         </div>
+        {customDecks.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-gray-400 text-sm font-bold uppercase mb-3 ml-1">Your Custom Decks</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {customDecks.map(cat => (
+                <div key={cat.id} className="relative">
+                  <button onClick={() => { setGameState(p => ({ ...p, category: cat.id })); setScreen('duration'); }} className={`${cat.color} w-full aspect-square rounded-2xl flex flex-col items-center justify-center shadow-lg transform active:scale-95 transition-transform`}>
+                    <span className="text-4xl mb-2">{cat.icon}</span>
+                    <span className="font-bold text-center px-2">{cat.name}</span>
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteDeck(cat.id); }} className="absolute -top-2 -right-2 bg-red-600 rounded-full p-1 shadow-md z-10"> <Trash2 size={16} /> </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <h3 className="text-gray-400 text-sm font-bold uppercase mb-3 ml-1">Standard Decks</h3>
         <div className="grid grid-cols-2 gap-4">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setGameState(p => ({ ...p, category: cat.id }));
-                setScreen('duration');
-              }}
-              className={`${cat.color} aspect-square rounded-2xl flex flex-col items-center justify-center shadow-lg transform active:scale-95 transition-transform`}
-            >
+          {DEFAULT_CATEGORIES.map(cat => (
+            <button key={cat.id} onClick={() => { setGameState(p => ({ ...p, category: cat.id })); setScreen('duration'); }} className={`${cat.color} aspect-square rounded-2xl flex flex-col items-center justify-center shadow-lg transform active:scale-95 transition-transform`}>
               <span className="text-4xl mb-2">{cat.icon}</span>
               <span className="font-bold text-center px-2">{cat.name}</span>
             </button>
@@ -576,7 +748,7 @@ export default function App() {
   }
   if (screen === 'duration') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
+      <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col pb-24">
         <div className="flex items-center mb-6">
           <button onClick={() => setScreen('category')} className="p-2 mr-4"> <ChevronLeft size={32} /> </button>
           <h2 className="text-xl font-bold">Game Duration</h2>
@@ -590,10 +762,9 @@ export default function App() {
     );
   }
 
-  // --- PREP SCREEN (Apply Force Rotation) ---
+  // --- PREP SCREEN ---
   if (screen === 'prep') {
     return (
-      // Changed class from bg-black to bg-gray-900 default to allow red/green override
       <div style={rotationStyle} className={`flex flex-col items-center justify-center p-8 text-center transition-colors duration-500 ${isSensorLandscape ? 'bg-green-900' : 'bg-red-900'}`}>
         {!isSensorLandscape ? (
           <>
@@ -612,11 +783,36 @@ export default function App() {
     );
   }
 
-  // --- GAME SCREEN (Apply Force Rotation) ---
+  // --- GAME SCREEN (WITH PAUSE BUTTON & MODAL) ---
   if (screen === 'game') {
-    const catData = CATEGORIES.find(c => c.id === gameState.category);
+    const allCats = [...DEFAULT_CATEGORIES, ...customDecks];
+    const catData = allCats.find(c => c.id === gameState.category);
+    
     return (
       <div style={rotationStyle} className={`${catData.color} flex flex-col relative overflow-hidden`}>
+        {/* PAUSE MODAL */}
+        {isPaused && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-white p-8 rounded-2xl text-center w-80 shadow-2xl">
+              <h2 className="text-3xl font-black text-gray-800 mb-6">PAUSED</h2>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => setIsPaused(false)} 
+                  className="w-full bg-green-500 text-white py-4 rounded-xl font-bold text-xl shadow-lg active:scale-95 transition-transform"
+                >
+                  RESUME
+                </button>
+                <button 
+                  onClick={() => { setIsPaused(false); setScreen('category'); }} 
+                  className="w-full bg-red-500 text-white py-4 rounded-xl font-bold text-xl shadow-lg active:scale-95 transition-transform"
+                >
+                  QUIT
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-center text-white/90 font-bold z-10">
           <div className="flex flex-col items-center bg-black/20 p-2 rounded-lg min-w-[60px]">
             <span className="text-xs uppercase">Time</span>
@@ -624,29 +820,56 @@ export default function App() {
               {formatTime(gameState.timeLeft)}
             </span>
           </div>
-          <div className="flex gap-4">
-            <div className="bg-green-600/80 px-4 py-1 rounded-full flex flex-col items-center">
-              <span className="text-xs">Correct</span>
-              <span className="text-lg">{gameState.score.correct}</span>
-            </div>
-            <div className="bg-red-600/80 px-4 py-1 rounded-full flex flex-col items-center">
-              <span className="text-xs">Pass</span>
-              <span className="text-lg">{gameState.score.pass}</span>
-            </div>
+          
+          <div className="flex gap-4 items-center">
+            {/* SCORE DISPLAY (Only if TILT MODE) */}
+            {settings.gameMode === 'tilt' && (
+              <div className="flex gap-4">
+                <div className="bg-green-600/80 px-4 py-1 rounded-full flex flex-col items-center">
+                  <span className="text-xs">Correct</span>
+                  <span className="text-lg">{gameState.score.correct}</span>
+                </div>
+                <div className="bg-red-600/80 px-4 py-1 rounded-full flex flex-col items-center">
+                  <span className="text-xs">Pass</span>
+                  <span className="text-lg">{gameState.score.pass}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* PAUSE BUTTON */}
+            <button 
+              onClick={() => setIsPaused(true)}
+              className="bg-black/30 p-3 rounded-full hover:bg-black/50 transition-colors"
+            >
+              <Pause fill="white" size={24} />
+            </button>
           </div>
         </div>
+
         <div className="flex-1 flex items-center justify-center p-8 text-center">
           <h1 className="text-5xl md:text-7xl font-black text-white drop-shadow-md leading-tight animate-bounce-in">
             {gameState.currentWord}
           </h1>
         </div>
+
+        {/* BUTTON MODE CONTROLS */}
+        {settings.gameMode === 'button' && (
+          <div className="h-32 flex w-full absolute bottom-0 left-0 z-20">
+             <button onClick={() => processAction('pass')} className="flex-1 bg-red-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-red-700 transition-colors border-r border-white/20"> 
+               <span className="text-3xl mb-1">👎</span> PASS 
+             </button>
+             <button onClick={() => processAction('correct')} className="flex-1 bg-green-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-green-700 transition-colors"> 
+               <span className="text-3xl mb-1">👍</span> CORRECT 
+             </button>
+          </div>
+        )}
       </div>
     );
   }
 
   if (screen === 'result') {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col pb-24">
         <div className="p-6 text-center bg-gray-800 shadow-md z-10">
           <h2 className="text-3xl font-bold mb-2">Time's Up!</h2>
           <div className="text-6xl font-black text-yellow-400 mb-2">{gameState.score.correct}</div>

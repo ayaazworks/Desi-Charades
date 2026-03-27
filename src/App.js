@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShoppingCart, ShieldCheck, Play, ChevronLeft, ChevronRight, RefreshCw, MessageCircle, WifiOff, FileText, Plus, Save, PenTool, Trash2, Crown, X, Pause, MousePointer2, ExternalLink, Globe } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Settings, Volume2, VolumeX, Smartphone, RotateCw, ShieldCheck, Play, ChevronLeft, ChevronRight, RefreshCw, MessageCircle, WifiOff, FileText, Plus, Save, PenTool, Trash2, Crown, X, Pause, MousePointer2, ExternalLink, Globe } from 'lucide-react';
 import { Preferences } from '@capacitor/preferences';
 import { Network } from '@capacitor/network';
 import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
 import { App as CapacitorApp } from '@capacitor/app';
 
-// --- IMPORT YOUR IMAGES ---
+// --- IMPORT IMAGES ---
 import qrCodeImg from './qrcode.jpeg';
 import howToPlayImg from './howtoplay.jpg';
+
 // NEW: Import Hindi image
-import howToPlayHindiImg from './howtoplayhindi.jpg'; 
+import howToPlayHindiImg from './howtoplayhindi.jpg';
+
 import splashBg from './splash-bg.jpg';
 
 // --- CONSTANTS ---
@@ -25,8 +27,8 @@ const ADMOB_IDS = {
 };
 
 const LINKS = {
-  privacy: "https://docs.google.com/document/d/11YqURZXba6QSVSBT_easihPFe-wxuEWUVdBwgS9nImI/edit?usp=drivesdk", 
-  terms: "https://docs.google.com/document/d/1lyCrijoJl2WFj7cfN-CBTI4oHcVsbOu7Vhqt5h6ZfqM/edit?usp=drivesdk"    
+  privacy: "https://docs.google.com/document/d/11YqURZXba6QSVSBT_easihPFe-wxuEWUVdBwgS9nImI/edit?usp=drivesdk",
+  terms: "https://docs.google.com/document/d/1lyCrijoJl2WFj7cfN-CBTI4oHcVsbOu7Vhqt5h6ZfqM/edit?usp=drivesdk"
 };
 
 const TRANSLATIONS = {
@@ -369,7 +371,7 @@ export default function App() {
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckEmoji, setNewDeckEmoji] = useState('🃏');
   const [newDeckWords, setNewDeckWords] = useState('');
-  
+
   // --- PAUSE STATE ---
   const [isPaused, setIsPaused] = useState(false);
 
@@ -386,13 +388,13 @@ export default function App() {
   // --- DISABLE BACK BUTTON LOGIC ---
   useEffect(() => {
     const handleBackButton = async () => {
-        if (currentScreenRef.current === 'home') {
-            CapacitorApp.exitApp();
-        } else {
-            if (currentScreenRef.current === 'create' || currentScreenRef.current === 'category' || currentScreenRef.current === 'settings' || currentScreenRef.current === 'howtoplay' || currentScreenRef.current === 'privacy') {
-               setScreen('home'); 
-            }
+      if (currentScreenRef.current === 'home') {
+        CapacitorApp.exitApp();
+      } else {
+        if (currentScreenRef.current === 'create' || currentScreenRef.current === 'category' || currentScreenRef.current === 'settings' || currentScreenRef.current === 'howtoplay' || currentScreenRef.current === 'privacy') {
+          setScreen('home');
         }
+      }
     };
     const listener = CapacitorApp.addListener('backButton', handleBackButton);
     return () => { listener.then(h => h.remove()); };
@@ -488,8 +490,8 @@ export default function App() {
 
   // --- ADS ---
   const manageAds = useCallback(async () => {
-    if (settings.adsRemoved || !isOnline) { try { await AdMob.hideBanner(); } catch (e) {} return; }
-    if (screen === 'prep' || screen === 'game') { try { await AdMob.hideBanner(); } catch (e) {} return; }
+    if (settings.adsRemoved || !isOnline) { try { await AdMob.hideBanner(); } catch (e) { } return; }
+    if (screen === 'prep' || screen === 'game') { try { await AdMob.hideBanner(); } catch (e) { } return; }
     try {
       await AdMob.initialize();
       const isAndroid = /Android/i.test(navigator.userAgent);
@@ -516,13 +518,13 @@ export default function App() {
   const [gameState, setGameState] = useState({ category: null, score: { correct: 0, pass: 0 }, wordsQueue: [], currentWord: '', timeLeft: 0, isActive: false, results: [] });
   const [prepTimer, setPrepTimer] = useState(3);
   const [isSensorLandscape, setIsSensorLandscape] = useState(false);
-  const [windowPortrait, setWindowPortrait] = useState(false); 
+  const [windowPortrait, setWindowPortrait] = useState(false);
   const tiltLocked = useRef(false);
   const waitingForNeutral = useRef(true);
 
   // --- SENSOR ---
   const checkSensor = useCallback((event) => {
-    if(!event) return;
+    if (!event) return;
     if (screen === 'game') return; // Lock check when game starts
     const { gamma } = event;
     const isLand = Math.abs(gamma) > 45;
@@ -542,25 +544,25 @@ export default function App() {
 
   const startGameFlow = (duration) => {
     setSettings(prev => ({ ...prev, durationMinutes: duration }));
-    
+
     // FETCH CORRECT WORD LIST BASED ON LANGUAGE
     const allCategories = [...DEFAULT_CATEGORIES, ...customDecks];
     const catData = allCategories.find(c => c.id === gameState.category);
-    
+
     let words;
     // Check if category has translation object or flat array (custom decks)
     if (Array.isArray(catData.words)) {
-        words = [...catData.words]; // Custom Deck
+      words = [...catData.words]; // Custom Deck
     } else {
-        // Translated Deck - Pick correct language or fallback to English
-        words = [...(catData.words[settings.language] || catData.words['en'])];
+      // Translated Deck - Pick correct language or fallback to English
+      words = [...(catData.words[settings.language] || catData.words['en'])];
     }
-    
+
     words = words.sort(() => Math.random() - 0.5);
     setGameState({ category: gameState.category, score: { correct: 0, pass: 0 }, wordsQueue: words, currentWord: words[0], timeLeft: duration * 60, isActive: false, results: [] });
     waitingForNeutral.current = true;
     tiltLocked.current = false;
-    setIsPaused(false); 
+    setIsPaused(false);
     setScreen('prep');
     setPrepTimer(3);
     requestTiltPermission();
@@ -613,7 +615,7 @@ export default function App() {
         const ids = isAndroid ? ADMOB_IDS.android : ADMOB_IDS.ios;
         await AdMob.prepareInterstitial({ adId: ids.interstitial });
         await AdMob.showInterstitial();
-      } catch (e) {}
+      } catch (e) { }
     }
     setScreen('result');
   }, [settings.adsRemoved, settings.sound, settings.vibration, isOnline]);
@@ -624,7 +626,7 @@ export default function App() {
   const processAction = useCallback((action) => {
     if (tiltLocked.current) return;
     tiltLocked.current = true;
-    
+
     setGameState(prev => {
       const currentWord = prev.currentWord;
       const newResults = [...prev.results, { word: currentWord, status: action }];
@@ -635,48 +637,48 @@ export default function App() {
     });
 
     if (settings.gameMode === 'button') {
-        setTimeout(() => {
-            setGameState(prev => {
-                const nextQueue = prev.wordsQueue.slice(1);
-                if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
-                return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
-            });
-            tiltLocked.current = false; 
-        }, 500);
+      setTimeout(() => {
+        setGameState(prev => {
+          const nextQueue = prev.wordsQueue.slice(1);
+          if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
+          return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
+        });
+        tiltLocked.current = false;
+      }, 500);
     } else {
-        waitingForNeutral.current = true;
-        setTimeout(() => {
-            setGameState(prev => {
-                const nextQueue = prev.wordsQueue.slice(1);
-                if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
-                return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
-            });
-        }, 500);
+      waitingForNeutral.current = true;
+      setTimeout(() => {
+        setGameState(prev => {
+          const nextQueue = prev.wordsQueue.slice(1);
+          if (nextQueue.length === 0) { setTimeout(endGame, 100); return prev; }
+          return { ...prev, wordsQueue: nextQueue, currentWord: nextQueue[0] };
+        });
+      }, 500);
     }
   }, [settings.sound, settings.vibration, endGame, settings.gameMode]);
 
   // --- GAMEPLAY TILT ---
   const handleGameTilt = useCallback((event) => {
-    if (screen !== 'game' || !gameState.isActive || isPaused) return; 
-    
+    if (screen !== 'game' || !gameState.isActive || isPaused) return;
+
     if (settings.gameMode === 'button') return;
 
     const { gamma } = event;
     const TILT_THRESHOLD = 40;
     const NEUTRAL_THRESHOLD = 15;
-    
+
     if (waitingForNeutral.current) {
-      if (Math.abs(gamma) < NEUTRAL_THRESHOLD) { 
-          waitingForNeutral.current = false; 
-          tiltLocked.current = false; 
+      if (Math.abs(gamma) < NEUTRAL_THRESHOLD) {
+        waitingForNeutral.current = false;
+        tiltLocked.current = false;
       }
       return;
     }
     if (tiltLocked.current) return;
-    
+
     if (gamma < -TILT_THRESHOLD) { processAction('correct'); }
     else if (gamma > TILT_THRESHOLD) { processAction('pass'); }
-    
+
   }, [screen, gameState.isActive, processAction, isPaused, settings.gameMode]);
 
   useEffect(() => {
@@ -716,19 +718,19 @@ export default function App() {
 
   if (screen === 'splash') {
     return (
-      <div 
+      <div
         className="h-screen w-full flex flex-col items-center justify-center text-white"
-        style={{ 
-          backgroundImage: `url(${splashBg})`, 
-          backgroundSize: 'cover', 
-          backgroundPosition: 'center' 
+        style={{
+          backgroundImage: `url(${splashBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
         }}
       >
         <div className="bg-black/40 absolute inset-0 z-0" />
         <div className="z-10 flex flex-col items-center">
-            <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
-            <h1 className="text-4xl font-bold tracking-wider mb-2 drop-shadow-lg">{t('title')}</h1>
-            <p className="text-indigo-100 drop-shadow-md">{t('loading')}</p>
+          <div className="text-6xl mb-4 animate-bounce">🇮🇳</div>
+          <h1 className="text-4xl font-bold tracking-wider mb-2 drop-shadow-lg">{t('title')}</h1>
+          <p className="text-indigo-100 drop-shadow-md">{t('loading')}</p>
         </div>
       </div>
     );
@@ -775,7 +777,7 @@ export default function App() {
         </div>
         <div className="space-y-6">
           <div className="bg-blue-500/20 border border-blue-500/50 p-4 rounded-xl text-sm text-blue-200">
-            <p className="font-bold mb-1 flex items-center gap-2"><PenTool size={16}/> {t('howCreate')}</p>
+            <p className="font-bold mb-1 flex items-center gap-2"><PenTool size={16} /> {t('howCreate')}</p>
             <p>{t('step1')}</p>
             <p>{t('step2')}</p>
             <p>{t('step3')}</p>
@@ -810,17 +812,17 @@ export default function App() {
         </div>
         {screen === 'settings' ? (
           <div className="space-y-4">
-             {/* LANGUAGE TOGGLE */}
+            {/* LANGUAGE TOGGLE */}
             <div className="bg-white/10 p-4 rounded-xl">
               <h3 className="text-gray-400 text-xs font-bold uppercase mb-3 tracking-wider">{t('language')}</h3>
               <div className="flex gap-2 bg-black/20 p-1 rounded-lg">
-                <button 
+                <button
                   onClick={() => saveLanguage('en')}
                   className={`flex-1 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors ${settings.language === 'en' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
                 >
                   <Globe size={16} /> English
                 </button>
-                <button 
+                <button
                   onClick={() => saveLanguage('hi')}
                   className={`flex-1 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors ${settings.language === 'hi' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-400 hover:text-white'}`}
                 >
@@ -877,9 +879,9 @@ export default function App() {
           </div>
         ) : (
           <div className="flex flex-col flex-1">
-            <div className="flex-1 overflow-y-auto mb-4 p-2 bg-white/5 rounded-xl"> 
+            <div className="flex-1 overflow-y-auto mb-4 p-2 bg-white/5 rounded-xl">
               {/* DYNAMIC IMAGE SOURCE BASED ON LANGUAGE */}
-              <img src={settings.language === 'hi' ? howToPlayHindiImg : howToPlayImg} alt="How to Play" className="w-full h-auto rounded-lg" /> 
+              <img src={settings.language === 'hi' ? howToPlayHindiImg : howToPlayImg} alt="How to Play" className="w-full h-auto rounded-lg" />
             </div>
             <button onClick={() => setScreen('category')} className="w-full bg-yellow-400 text-black py-4 rounded-xl font-bold text-xl shadow-lg flex items-center justify-center gap-2 hover:bg-yellow-300 transition-colors"> Continue <Play fill="currentColor" size={20} /> </button>
           </div>
@@ -897,18 +899,18 @@ export default function App() {
           <h2 className="text-2xl font-bold">{t('legal')}</h2>
         </div>
         <div className="space-y-6 text-gray-300 overflow-y-auto">
-          <div className="bg-white/10 p-5 rounded-xl border-l-4 border-blue-500"> 
-            <h3 className="text-white font-bold text-lg mb-2">{t('transparency')}</h3> 
-            <p className="text-sm leading-relaxed"> {t('transparencyDesc')} </p> 
+          <div className="bg-white/10 p-5 rounded-xl border-l-4 border-blue-500">
+            <h3 className="text-white font-bold text-lg mb-2">{t('transparency')}</h3>
+            <p className="text-sm leading-relaxed"> {t('transparencyDesc')} </p>
           </div>
-          
+
           <div className="space-y-3">
-            <a href={LINKS.privacy} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors">
+            <a href={LINKS.privacy} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl justify-between items-center hover:bg-white/20 transition-colors">
               <span className="font-bold text-white flex items-center gap-3"><ShieldCheck size={20} className="text-green-400" /> Privacy Policy</span>
               <ExternalLink size={18} className="text-gray-400" />
             </a>
-            
-            <a href={LINKS.terms} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl flex justify-between items-center hover:bg-white/20 transition-colors">
+
+            <a href={LINKS.terms} target="_blank" rel="noreferrer" className="block w-full bg-white/10 p-4 rounded-xl justify-between items-center hover:bg-white/20 transition-colors">
               <span className="font-bold text-white flex items-center gap-3"><FileText size={20} className="text-blue-400" /> {t('terms')}</span>
               <ExternalLink size={18} className="text-gray-400" />
             </a>
@@ -995,7 +997,7 @@ export default function App() {
   if (screen === 'game') {
     const allCats = [...DEFAULT_CATEGORIES, ...customDecks];
     const catData = allCats.find(c => c.id === gameState.category);
-    
+
     return (
       <div style={rotationStyle} className={`${catData.color} flex flex-col relative overflow-hidden`}>
         {/* PAUSE MODAL */}
@@ -1018,7 +1020,7 @@ export default function App() {
               {formatTime(gameState.timeLeft)}
             </span>
           </div>
-          
+
           <div className="flex gap-4 items-center">
             {/* SCORE DISPLAY (Only if TILT MODE) */}
             {settings.gameMode === 'tilt' && (
@@ -1033,7 +1035,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            
+
             {/* PAUSE BUTTON */}
             <button onClick={() => setIsPaused(true)} className="bg-black/30 p-3 rounded-full hover:bg-black/50 transition-colors"> <Pause fill="white" size={24} /> </button>
           </div>
@@ -1048,12 +1050,12 @@ export default function App() {
         {/* BUTTON MODE CONTROLS */}
         {settings.gameMode === 'button' && (
           <div className="h-32 flex w-full absolute bottom-0 left-0 z-20">
-             <button onClick={() => processAction('pass')} className="flex-1 bg-red-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-red-700 transition-colors border-r border-white/20"> 
-               <span className="text-3xl mb-1">👎</span> {t('pass')}
-             </button>
-             <button onClick={() => processAction('correct')} className="flex-1 bg-green-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-green-700 transition-colors"> 
-               <span className="text-3xl mb-1">👍</span> {t('correct')}
-             </button>
+            <button onClick={() => processAction('pass')} className="flex-1 bg-red-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-red-700 transition-colors border-r border-white/20">
+              <span className="text-3xl mb-1">👎</span> {t('pass')}
+            </button>
+            <button onClick={() => processAction('correct')} className="flex-1 bg-green-600 text-white font-bold text-2xl flex flex-col items-center justify-center active:bg-green-700 transition-colors">
+              <span className="text-3xl mb-1">👍</span> {t('correct')}
+            </button>
           </div>
         )}
       </div>
